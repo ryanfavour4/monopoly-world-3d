@@ -1,8 +1,8 @@
 [gd_scene format=3 uid="uid://ci7q43m42x78k"]
 
-[ext_resource type="Script" uid="uid://cxvh8ebk0w45l" path="res://scenes/ui/InventoryPanel.gd" id="1_inv"]
+[ext_resource type="Script" path="res://scenes/ui/InventoryPanel.gd" id="1_inv"]
 [ext_resource type="Theme" path="res://resources/monopoly_theme.tres" id="2_theme"]
-[ext_resource type="PackedScene" uid="uid://b87x2q7lpvw3m" path="res://scenes/ui/PropertyCard.tscn" id="3_card_scene"]
+[ext_resource type="PackedScene" path="res://scenes/ui/PropertyCard.tscn" id="3_card_scene"]
 
 [node name="InventoryPanel" type="Control"]
 custom_minimum_size = Vector2(340, 240)

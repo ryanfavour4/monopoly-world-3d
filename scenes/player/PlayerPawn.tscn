@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://c5qwx87l0vjmr"]
 
-[ext_resource type="Script" uid="uid://bgp4f6t3k5c7n" path="res://scenes/player/PlayerPawn.gd" id="1_pawn"]
-[ext_resource type="Script" uid="uid://cf4v7t5p3x7q1" path="res://scenes/player/AnimationController.gd" id="2_anim"]
+[ext_resource type="Script" path="res://scenes/player/PlayerPawn.gd" id="1_pawn"]
+[ext_resource type="Script" path="res://scenes/player/AnimationController.gd" id="2_anim"]
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_pawn"]
 top_radius = 0.15

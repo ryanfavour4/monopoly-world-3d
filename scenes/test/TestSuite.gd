@@ -21,6 +21,12 @@ func test_gamestate() -> void:
 	GameState.reset_game()
 	assert(GameState.players.is_empty(), "GameState players should start empty")
 
+	# Verify AudioManager methods
+	assert(AudioManager.has_method("play_ding"), "AudioManager must have play_ding")
+	assert(AudioManager.has_method("play_dice_roll"), "AudioManager must have play_dice_roll")
+	AudioManager.play_dice_roll()
+	AudioManager.play_ding()
+
 	# Register Host and Client
 	GameState.add_player(1, "Alice (Host)")
 	GameState.add_player(2, "Bob (Client)")

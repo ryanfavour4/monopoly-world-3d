@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://b87x2q7lpvw3m"]
 
-[ext_resource type="Script" uid="uid://cslqfub33j064" path="res://scenes/ui/PropertyCard.gd" id="1_card"]
+[ext_resource type="Script" path="res://scenes/ui/PropertyCard.gd" id="1_card"]
 [ext_resource type="Theme" path="res://resources/monopoly_theme.tres" id="2_theme"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card_bg"]
