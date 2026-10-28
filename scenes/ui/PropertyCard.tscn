@@ -1,13 +1,13 @@
 [gd_scene format=3 uid="uid://b87x2q7lpvw3m"]
 
-[ext_resource type="Script" uid="uid://cslqfub33j064" path="res://scenes/ui/PropertyCard.gd" id="1_card"]
+[ext_resource type="Script" path="res://scenes/ui/PropertyCard.gd" id="1_card"]
 [ext_resource type="Theme" path="res://resources/monopoly_theme.tres" id="2_theme"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card_bg"]
 content_margin_left = 10.0
-content_margin_top = 10.0
+content_margin_top = 8.0
 content_margin_right = 10.0
-content_margin_bottom = 10.0
+content_margin_bottom = 8.0
 bg_color = Color(0.1, 0.12, 0.18, 0.95)
 border_width_left = 1
 border_width_top = 1
@@ -20,9 +20,9 @@ corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
 
 [node name="PropertyCard" type="PanelContainer"]
-custom_minimum_size = Vector2(130, 160)
-offset_right = 130.0
-offset_bottom = 160.0
+custom_minimum_size = Vector2(136, 185)
+offset_right = 136.0
+offset_bottom = 185.0
 theme = ExtResource("2_theme")
 theme_override_styles/panel = SubResource("StyleBoxFlat_card_bg")
 script = ExtResource("1_card")
@@ -38,7 +38,7 @@ layout_mode = 2
 theme_override_constants/separation = 4
 
 [node name="Spacer" type="Control" parent="VBox"]
-custom_minimum_size = Vector2(0, 12)
+custom_minimum_size = Vector2(0, 10)
 layout_mode = 2
 
 [node name="NameLabel" type="Label" parent="VBox"]
@@ -69,8 +69,14 @@ theme_override_font_sizes/font_size = 11
 text = "Houses: 0"
 horizontal_alignment = 1
 
-[node name="MortgageButton" type="Button" parent="VBox"]
-custom_minimum_size = Vector2(0, 28)
+[node name="UpgradeButton" type="Button" parent="VBox"]
+custom_minimum_size = Vector2(0, 24)
 layout_mode = 2
-theme_override_font_sizes/font_size = 11
+theme_override_font_sizes/font_size = 10
+text = "+ Upgrade"
+
+[node name="MortgageButton" type="Button" parent="VBox"]
+custom_minimum_size = Vector2(0, 24)
+layout_mode = 2
+theme_override_font_sizes/font_size = 10
 text = "Mortgage"

@@ -1,67 +1,148 @@
 [gd_scene format=3 uid="uid://ci7q43m42x78k"]
 
-[ext_resource type="Script" uid="uid://cxvh8ebk0w45l" path="res://scenes/ui/InventoryPanel.gd" id="1_inv"]
+[ext_resource type="Script" path="res://scenes/ui/InventoryPanel.gd" id="1_inv"]
 [ext_resource type="Theme" path="res://resources/monopoly_theme.tres" id="2_theme"]
-[ext_resource type="PackedScene" uid="uid://b87x2q7lpvw3m" path="res://scenes/ui/PropertyCard.tscn" id="3_card_scene"]
+[ext_resource type="PackedScene" path="res://scenes/ui/PropertyCard.tscn" id="3_card_scene"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_drawer_bg"]
+content_margin_left = 12.0
+content_margin_top = 10.0
+content_margin_right = 12.0
+content_margin_bottom = 10.0
+bg_color = Color(0.08, 0.1, 0.16, 0.96)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.22, 0.32, 0.5, 0.8)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_normal"]
+content_margin_left = 14.0
+content_margin_top = 6.0
+content_margin_right = 14.0
+content_margin_bottom = 6.0
+bg_color = Color(0.12, 0.16, 0.24, 0.95)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.28, 0.42, 0.65, 0.8)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_hover"]
+content_margin_left = 14.0
+content_margin_top = 6.0
+content_margin_right = 14.0
+content_margin_bottom = 6.0
+bg_color = Color(0.18, 0.24, 0.36, 0.98)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.4, 0.6, 0.9, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
 
 [node name="InventoryPanel" type="Control"]
-custom_minimum_size = Vector2(340, 240)
 layout_mode = 3
-anchors_preset = 3
-anchor_left = 1.0
+anchors_preset = 12
 anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -360.0
-offset_top = -260.0
-offset_right = -20.0
-offset_bottom = -20.0
-grow_horizontal = 0
+offset_top = -42.0
+grow_horizontal = 2
 grow_vertical = 0
 theme = ExtResource("2_theme")
 script = ExtResource("1_inv")
 property_card_scene = ExtResource("3_card_scene")
 
-[node name="Panel" type="PanelContainer" parent="."]
+[node name="VBox" type="VBoxContainer" parent="."]
 layout_mode = 1
-anchors_preset = 15
+anchors_preset = 12
+anchor_top = 1.0
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_top = -42.0
 grow_horizontal = 2
-grow_vertical = 2
+grow_vertical = 0
+theme_override_constants/separation = 4
 
-[node name="VBox" type="VBoxContainer" parent="Panel"]
+[node name="ToggleDockButton" type="Button" parent="VBox"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.94, 1, 1)
+theme_override_colors/font_hover_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 13
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_normal")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
+text = "▲ MY PROPERTY PORTFOLIO (0) — Click to View Rents & Upgrades"
+
+[node name="DrawerBody" type="PanelContainer" parent="VBox"]
+visible = false
+custom_minimum_size = Vector2(0, 245)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_drawer_bg")
+
+[node name="ContentVBox" type="VBoxContainer" parent="VBox/DrawerBody"]
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="HeaderHBox" type="HBoxContainer" parent="Panel/VBox"]
+[node name="HeaderHBox" type="HBoxContainer" parent="VBox/DrawerBody/ContentVBox"]
 layout_mode = 2
 
-[node name="PlayerNameLabel" type="Label" parent="Panel/VBox/HeaderHBox"]
+[node name="PlayerNameLabel" type="Label" parent="VBox/DrawerBody/ContentVBox/HeaderHBox"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
-theme_override_font_sizes/font_size = 14
-text = "Your Properties"
+theme_override_colors/font_color = Color(1, 0.85, 0.25, 1)
+theme_override_font_sizes/font_size = 13
+text = "👑 Your Properties (0)"
 
-[node name="MoneyLabel" type="Label" parent="Panel/VBox/HeaderHBox"]
+[node name="MoneyLabel" type="Label" parent="VBox/DrawerBody/ContentVBox/HeaderHBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.2, 0.9, 0.45, 1)
-theme_override_font_sizes/font_size = 15
-text = "$1,500"
+theme_override_font_sizes/font_size = 13
+text = "💵 Cash: $1,500"
 
-[node name="HSeparator" type="HSeparator" parent="Panel/VBox"]
+[node name="VSep" type="VSeparator" parent="VBox/DrawerBody/ContentVBox/HeaderHBox"]
 layout_mode = 2
 
-[node name="ScrollContainer" type="ScrollContainer" parent="Panel/VBox"]
+[node name="NetWorthLabel" type="Label" parent="VBox/DrawerBody/ContentVBox/HeaderHBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.95, 0.75, 0.2, 1)
+theme_override_font_sizes/font_size = 13
+text = "💎 Net Worth: $1,500"
+
+[node name="HSeparator" type="HSeparator" parent="VBox/DrawerBody/ContentVBox"]
+layout_mode = 2
+
+[node name="ScrollContainer" type="ScrollContainer" parent="VBox/DrawerBody/ContentVBox"]
+custom_minimum_size = Vector2(0, 192)
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_scroll_mode = 2
 vertical_scroll_mode = 0
 
-[node name="GridContainer" type="GridContainer" parent="Panel/VBox/ScrollContainer"]
+[node name="CardsContainer" type="HBoxContainer" parent="VBox/DrawerBody/ContentVBox/ScrollContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-theme_override_constants/h_separation = 8
-columns = 20
+theme_override_constants/separation = 10
+
+[node name="EmptyLabel" type="Label" parent="VBox/DrawerBody/ContentVBox"]
+visible = false
+layout_mode = 2
+size_flags_vertical = 6
+theme_override_colors/font_color = Color(0.65, 0.7, 0.8, 0.85)
+theme_override_font_sizes/font_size = 13
+text = "🏢 No properties owned yet. Land on unowned spaces around the board to expand your monopoly empire!"
+horizontal_alignment = 1
+vertical_alignment = 1

@@ -217,6 +217,10 @@ func rpc_roll_dice(die1: int, die2: int) -> void:
 	if dice_node and dice_node.has_method("play_roll"):
 		dice_node.play_roll(die1, die2)
 
+	var dice_3d: Node = get_tree().root.find_child("Dice3D", true, false)
+	if dice_3d and dice_3d.has_method("play_roll"):
+		dice_3d.play_roll(die1, die2)
+
 	# The server resolves movement after dice animation settles (approx 1.2s)
 	if not multiplayer.has_multiplayer_peer() or multiplayer.is_server():
 		get_tree().create_timer(1.2).timeout.connect(func():
@@ -457,6 +461,39 @@ func _execute_purchase(player_id: int, tile_index: int) -> void:
 			rpc_sync_state.rpc(GameState.players, BoardManager.get_all_owners())
 		else:
 			# Local update for offline or single-player
+			var inv: Node = get_tree().root.find_child("InventoryPanel", true, false)
+			if inv and inv.has_method("refresh_inventory"):
+				inv.refresh_inventory(player_id)
+			var spawner: Node = get_tree().root.find_child("BuildingSpawner", true, false)
+			if spawner and spawner.has_method("sync_buildings"):
+				spawner.sync_buildings()
+
+
+## upgrade_property
+## Upgrades house / hotel on property
+func upgrade_property(player_id: int, tile_index: int) -> void:
+	if multiplayer.has_multiplayer_peer() and not multiplayer.is_server():
+		rpc_request_upgrade.rpc_id(1, tile_index)
+	else:
+		_execute_upgrade(player_id, tile_index)
+
+
+@rpc("any_peer", "reliable")
+func rpc_request_upgrade(tile_index: int) -> void:
+	if not multiplayer.is_server():
+		return
+	var sender_id: int = multiplayer.get_remote_sender_id()
+	_execute_upgrade(sender_id, tile_index)
+
+
+func _execute_upgrade(player_id: int, tile_index: int) -> void:
+	if not BoardManager.can_build_house(player_id, tile_index):
+		return
+	var success: bool = BoardManager.build_house(player_id, tile_index)
+	if success:
+		if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
+			rpc_sync_state.rpc(GameState.players, BoardManager.get_all_owners())
+		else:
 			var inv: Node = get_tree().root.find_child("InventoryPanel", true, false)
 			if inv and inv.has_method("refresh_inventory"):
 				inv.refresh_inventory(player_id)

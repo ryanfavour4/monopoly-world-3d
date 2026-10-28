@@ -107,14 +107,14 @@ extends Node3D
 @onready var turn_manager: Node = get_node_or_null("/root/TurnManager") if has_node("/root/TurnManager") else $TurnManager
 
 ## Root of the 2-D HUD overlay; routes UI events and shows modals.
-@onready var ui_manager: Node = $UI/UIManager
+@onready var ui_manager: Node = find_child("UIManager", true, false)
 
 ## Container that holds all spawned PlayerPawn instances.
-@onready var pawns_container: Node3D = $Pawns
+@onready var pawns_container: Node3D = find_child("Pawns", true, false)
 
 ## Parent of the 40 BoardTile child nodes; used by BoardManager to get
 ## world-space positions for moving pawns.
-@onready var tile_markers: Node3D = $TileMarkers
+@onready var tile_markers: Node3D = find_child("TileMarkers", true, false)
 
 
 # ---------------------------------------------------------------------------
@@ -150,8 +150,9 @@ func _ready() -> void:
 		var p_data: Dictionary = GameState.get_player(pid)
 		var uname: String = p_data.get("username", "Player %d" % pid)
 		var is_local: bool = (pid == multiplayer.get_unique_id())
-		ui_manager.show_turn_notification(pid, uname, is_local)
-		var dice_node = get_node_or_null("UI/DiceRoller")
+		if ui_manager and ui_manager.has_method("show_turn_notification"):
+			ui_manager.show_turn_notification(pid, uname, is_local)
+		var dice_node = find_child("DiceRoller", true, false)
 		if dice_node and dice_node.has_method("set_my_turn"):
 			dice_node.set_my_turn(is_local)
 	)
