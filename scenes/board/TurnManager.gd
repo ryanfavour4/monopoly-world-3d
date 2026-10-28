@@ -450,15 +450,19 @@ func _execute_purchase(player_id: int, tile_index: int) -> void:
 	if player.get("money", 0) >= tile.purchase_price:
 		GameState.update_player_money(player_id, -tile.purchase_price)
 		BoardManager.set_tile_owner(tile_index, player_id)
-		var props: Array = player.get("properties", [])
-		if not props.has(tile_index):
-			props.append(tile_index)
-			player["properties"] = props
-		GameState.emit_signal("player_state_changed", player_id)
+		GameState.add_player_property(player_id, tile_index)
 		print("[TurnManager] Player %d purchased %s for $%d" % [player_id, tile.tile_name, tile.purchase_price])
 
 		if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
 			rpc_sync_state.rpc(GameState.players, BoardManager.get_all_owners())
+		else:
+			# Local update for offline or single-player
+			var inv: Node = get_tree().root.find_child("InventoryPanel", true, false)
+			if inv and inv.has_method("refresh_inventory"):
+				inv.refresh_inventory(player_id)
+			var spawner: Node = get_tree().root.find_child("BuildingSpawner", true, false)
+			if spawner and spawner.has_method("sync_buildings"):
+				spawner.sync_buildings()
 
 
 ## pay_rent
@@ -490,10 +494,14 @@ func rpc_sync_state(synced_players: Array, synced_owners: Dictionary) -> void:
 	GameState.set_players(synced_players)
 	BoardManager.set_all_owners(synced_owners)
 	var ui: Node = get_tree().root.find_child("UIManager", true, false)
-	if ui:
-		var inv = ui.get_node_or_null("../InventoryPanel")
-		if inv and inv.has_method("refresh_inventory"):
-			inv.refresh_inventory(multiplayer.get_unique_id())
+	if ui and ui.has_method("refresh_all_hud"):
+		ui.refresh_all_hud()
+	var inv: Node = get_tree().root.find_child("InventoryPanel", true, false)
+	if inv and inv.has_method("refresh_inventory"):
+		inv.refresh_inventory(multiplayer.get_unique_id())
+	var spawner: Node = get_tree().root.find_child("BuildingSpawner", true, false)
+	if spawner and spawner.has_method("sync_buildings"):
+		spawner.sync_buildings()
 
 
 ## apply_money_delta

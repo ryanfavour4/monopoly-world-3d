@@ -54,6 +54,9 @@ extends Control
 ## Button that creates a new hosted (server) game session.
 @onready var host_button: Button = find_child("HostButton", true, false)
 
+## Button that plays solo offline.
+@onready var solo_button: Button = find_child("SoloButton", true, false)
+
 ## Button that attempts to connect to a remote host as a client.
 @onready var join_button: Button = find_child("JoinButton", true, false)
 
@@ -72,51 +75,36 @@ func _ready() -> void:
 	# ── Button signal connections ──────────────────────────────────────────
 	if not host_button.pressed.is_connected(_on_host_button_pressed):
 		host_button.pressed.connect(_on_host_button_pressed)
+	if solo_button and not solo_button.pressed.is_connected(_on_solo_button_pressed):
+		solo_button.pressed.connect(_on_solo_button_pressed)
 	if not join_button.pressed.is_connected(_on_join_button_pressed):
 		join_button.pressed.connect(_on_join_button_pressed)
 
 	# ── NetworkUtility signal connections ──────────────────────────────────
-	# connection_succeeded: fired on this client when the host accepts us.
 	if not NetworkUtility.connection_succeeded.is_connected(_on_connection_succeeded):
 		NetworkUtility.connection_succeeded.connect(_on_connection_succeeded)
 
-	# connection_failed: fired on this client when the connection times out
-	# or is refused.
 	if not NetworkUtility.connection_failed.is_connected(_on_connection_failed):
 		NetworkUtility.connection_failed.connect(_on_connection_failed)
 
-	# lobby_updated: fired whenever the player list changes. Connected here
-	# so signals don't stack if the user returns to the main menu.
 	if not NetworkUtility.lobby_updated.is_connected(_on_lobby_updated):
 		NetworkUtility.lobby_updated.connect(_on_lobby_updated)
 
-	# Clear any leftover status text from a previous session.
 	status_label.text = ""
 
-	# Pre-fill the IP field with localhost for convenience during development.
 	if ip_field.text.is_empty():
 		ip_field.text = "127.0.0.1"
 
 
 # ---------------------------------------------------------------------------
 # _on_host_button_pressed
-# Called when the player clicks "Host Game".
-#
-# Behaviour:
-#   1. Validates that the player has entered a non-empty username.
-#   2. Instructs NetworkUtility to open a server socket.
-#   3. Updates the status label so the host knows they are waiting.
-#   4. Navigates immediately to the Lobby scene (host does not need to wait
-#      for a connection_succeeded signal — they ARE the server).
 # ---------------------------------------------------------------------------
 func _on_host_button_pressed() -> void:
-	# ── Validation ─────────────────────────────────────────────────────────
 	var username: String = username_field.text.strip_edges()
 	if username.is_empty():
-		_show_status("⚠️ Please enter a username before hosting.", Color.YELLOW)
-		return
+		username = "Host"
+		username_field.text = username
 
-	# ── Start the server via NetworkUtility ────────────────────────────────
 	var success: bool = NetworkUtility.host_game(username)
 	if not success:
 		_show_status("❌ Failed to bind server on port 7777 (already in use?).", Color.RED)
@@ -124,54 +112,58 @@ func _on_host_button_pressed() -> void:
 		join_button.disabled = false
 		return
 
-	# ── UI feedback ────────────────────────────────────────────────────────
-	_show_status("🎲 Hosting… Waiting for players.", Color.GREEN)
+	# Retrieve local IP
+	var addresses: Array = IP.get_local_addresses()
+	var lan_ip: String = "127.0.0.1"
+	for addr in addresses:
+		if (addr.begins_with("192.168.") or addr.begins_with("10.") or addr.begins_with("172.")) and not ":" in addr:
+			lan_ip = addr
+			break
+
+	_show_status("🎲 Server running on port 7777 (LAN IP: %s)\nWaiting for peer to join (auto-starts on connect)..." % lan_ip, Color.GREEN)
 	host_button.disabled = true
 	join_button.disabled = true
+	if solo_button:
+		solo_button.text = "▶️ Start Now (Solo)"
 
-	# ── Navigate to the Lobby ──────────────────────────────────────────────
-	get_tree().change_scene_to_file("res://scenes/lobby/Lobby.tscn")
+
+func _on_solo_button_pressed() -> void:
+	var username: String = username_field.text.strip_edges()
+	if username.is_empty():
+		username = "Player"
+	NetworkUtility.start_solo_game(username)
 
 
 # ---------------------------------------------------------------------------
 # _on_join_button_pressed
 # ---------------------------------------------------------------------------
 func _on_join_button_pressed() -> void:
-	# ── Validation ─────────────────────────────────────────────────────────
 	var username: String = username_field.text.strip_edges()
 	if username.is_empty():
-		_show_status("⚠️ Please enter a username before joining.", Color.YELLOW)
-		return
+		username = "Guest"
+		username_field.text = username
 
 	var ip: String = ip_field.text.strip_edges()
 	if ip.is_empty():
-		_show_status("⚠️ Please enter the host IP address.", Color.YELLOW)
-		return
+		ip = "127.0.0.1"
+		ip_field.text = ip
 
-	# ── Attempt connection via NetworkUtility ──────────────────────────────
 	var success: bool = NetworkUtility.join_game(ip, username)
 	if not success:
 		_show_status("❌ Could not initiate connection to %s." % ip, Color.RED)
 		return
 
-	# ── UI feedback ────────────────────────────────────────────────────────
-	_show_status("🔄 Connecting to %s…" % ip, Color.CYAN)
+	_show_status("🔄 Connecting to %s:7777 …" % ip, Color.CYAN)
 	host_button.disabled = true
 	join_button.disabled = true
+	if solo_button:
+		solo_button.disabled = true
 	ip_field.editable = false
 	username_field.editable = false
 
 
-# ---------------------------------------------------------------------------
-# _on_connection_succeeded
-# Slot connected to NetworkUtility.connection_succeeded.
-# Called on the CLIENT only — the host never fires this signal.
-#
-# Navigates to the Lobby scene now that the connection is confirmed.
-# ---------------------------------------------------------------------------
 func _on_connection_succeeded() -> void:
-	_show_status("✅ Connected! Entering lobby…", Color.GREEN)
-	get_tree().change_scene_to_file("res://scenes/lobby/Lobby.tscn")
+	_show_status("✅ Connected! Loading 3D Board scene…", Color.GREEN)
 
 
 # ---------------------------------------------------------------------------

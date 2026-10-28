@@ -104,17 +104,19 @@ func add_player(peer_id: int, username: String) -> void:
 	# Build the canonical player dictionary. Every field that other systems
 	# depend on must be initialised here so get_player() callers never have
 	# to check for key existence with .has().
+	var props_list: Array = []
 	var player_dict: Dictionary = {
-		"id":         peer_id,        # int  — stable ENet peer ID used as primary key
-		"username":   username,       # String — display name shown in HUD / chat
-		"money":      starting_money, # int — current cash balance
-		"position":   0,              # int — current board space index (0 = GO)
-		"properties": [],             # Array[int] — list of board space indices this player owns
-		"bankrupt":   false,          # bool — set true by check_bankruptcy(); skipped in turn order
-		"in_jail":    false,          # bool — jail status
-		"jail_turns": 0,              # int — turns spent in jail
-		"color":      assigned_color, # Color — distinct visual pawn color
-		"colour":     assigned_color  # Color — alias for British English compatibility
+		"id":               peer_id,        # int  — stable ENet peer ID used as primary key
+		"username":         username,       # String — display name shown in HUD / chat
+		"money":            starting_money, # int — current cash balance
+		"position":         0,              # int — current board space index (0 = GO)
+		"properties":       props_list,     # Array[int] — list of board space indices this player owns
+		"owned_properties": props_list,     # Alias for properties array to ensure UI compatibility
+		"bankrupt":         false,          # bool — set true by check_bankruptcy(); skipped in turn order
+		"in_jail":          false,          # bool — jail status
+		"jail_turns":       0,              # int — turns spent in jail
+		"color":            assigned_color, # Color — distinct visual pawn color
+		"colour":           assigned_color  # Color — alias for British English compatibility
 	}
 
 	players.append(player_dict)
@@ -129,7 +131,72 @@ func set_players(new_players: Array) -> void:
 	players = new_players.duplicate(true)
 	for p in players:
 		if p is Dictionary and p.has("id"):
+			# Ensure both property keys point to the same array
+			if p.has("properties") and not p.has("owned_properties"):
+				p["owned_properties"] = p["properties"]
+			elif p.has("owned_properties") and not p.has("properties"):
+				p["properties"] = p["owned_properties"]
+			elif not p.has("properties"):
+				var empty_p: Array = []
+				p["properties"] = empty_p
+				p["owned_properties"] = empty_p
 			emit_signal("player_state_changed", p["id"])
+
+
+## add_player_property
+## Appends property tile index to player's inventory and emits update
+func add_player_property(peer_id: int, tile_index: int) -> void:
+	var idx: int = _find_player_index(peer_id)
+	if idx != -1:
+		var props: Array = players[idx].get("properties", [])
+		if not props.has(tile_index):
+			props.append(tile_index)
+			players[idx]["properties"] = props
+			players[idx]["owned_properties"] = props
+			emit_signal("player_state_changed", peer_id)
+
+
+## remove_player_property
+func remove_player_property(peer_id: int, tile_index: int) -> void:
+	var idx: int = _find_player_index(peer_id)
+	if idx != -1:
+		var props: Array = players[idx].get("properties", [])
+		if props.has(tile_index):
+			props.erase(tile_index)
+			players[idx]["properties"] = props
+			players[idx]["owned_properties"] = props
+			emit_signal("player_state_changed", peer_id)
+
+
+## get_player_properties
+func get_player_properties(peer_id: int) -> Array[int]:
+	var idx: int = _find_player_index(peer_id)
+	if idx != -1:
+		var raw: Array = players[idx].get("properties", players[idx].get("owned_properties", []))
+		var result: Array[int] = []
+		for item in raw:
+			result.append(int(item))
+		return result
+	return []
+
+
+## get_player_net_worth
+## Calculates cash + total purchase value of owned properties
+func get_player_net_worth(peer_id: int) -> int:
+	var p: Dictionary = get_player(peer_id)
+	if p.is_empty():
+		return 0
+	var total: int = p.get("money", 0)
+	var props: Array[int] = get_player_properties(peer_id)
+	var bm = Engine.get_main_loop().root.find_child("BoardManager", true, false) if Engine.get_main_loop() else null
+	for t_idx in props:
+		if bm and bm.has_method("get_tile"):
+			var tile = bm.get_tile(t_idx)
+			if tile:
+				total += tile.purchase_price
+		else:
+			total += 100 # rough baseline if bm not ready
+	return total
 
 
 ## get_player_ids

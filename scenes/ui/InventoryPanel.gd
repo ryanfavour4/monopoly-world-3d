@@ -118,11 +118,16 @@ func refresh_inventory(peer_id: int) -> void:
 
 	# --- Fetch player data ---
 	var player_data := GameState.get_player(peer_id)
-	# player_data.owned_properties is an Array[int] of tile indices.
-	var owned: Array = player_data.get("owned_properties", [])
+	var owned: Array = player_data.get("properties", player_data.get("owned_properties", []))
+	if owned.is_empty():
+		# Authoritative fallback to BoardManager
+		var tiles_owned: Array[BoardTileData] = BoardManager.get_tiles_by_owner(peer_id)
+		for t in tiles_owned:
+			if not owned.has(t.tile_index):
+				owned.append(t.tile_index)
 
 	# Update the header label with the player's username.
-	player_name_label.text = "%s's Properties" % player_data.get("username", "Player")
+	player_name_label.text = "%s's Properties (%d)" % [player_data.get("username", "Player"), owned.size()]
 
 	# --- Instantiate one PropertyCard per owned tile ---
 	for tile_index: int in owned:

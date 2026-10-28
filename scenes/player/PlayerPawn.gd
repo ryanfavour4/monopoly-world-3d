@@ -2,25 +2,15 @@
 # PlayerPawn.gd
 # =============================================================================
 # Represents a single player's game piece on the 3-D Monopoly board.
-# Handles:
-#   • Visual setup (color, username label)
-#   • Smooth step-by-step tile traversal via Tween
-#   • Landing animations that reflect the game outcome
-#   • Idle timeout animation so parked pawns stay lively
-#   • Instant jail teleport
-#
-# Expected scene hierarchy (PlayerPawn.tscn):
-#   PlayerPawn (CharacterBody3D)          ← this script
-#   ├── AnimationController (Node)        ← AnimationController.gd
-#   │   └── AnimationPlayer
-#   ├── MeshInstance3D                    ← the visible 3-D pawn mesh
-#   ├── NameLabel (Label3D)               ← floating username above the pawn
-#   └── IdleTimer (Timer)                 ← fires after 5 s of inactivity
-#
-# Multiplayer note: This node is spawned and driven by the authority peer that
-# owns it (player_id == multiplayer.get_unique_id()). Visual updates (Tween,
-# animations) run locally on every client for smooth presentation; the
-# authoritative game state lives in PlayerData resources synced by GameManager.
+# Visual Overhaul:
+#   • Procedural 3D Roadster Car token replacing generic cylinders
+#   • Dynamic player body color with metallic lacquer
+#   • Tinted cabin windshield, chrome grille, glowing headlights & taillights
+#   • 4 rotating wheels with chrome hubcaps that spin during movement
+#   • Suspension bob and forward-facing directional steering
+#   • Animated landing reactions (wheelie celebrations, sad suspension sag)
+#   • Idle engine breathing vibration
+#   • Floating billboard username label
 # =============================================================================
 
 extends CharacterBody3D
@@ -29,338 +19,375 @@ extends CharacterBody3D
 # Signals
 # ---------------------------------------------------------------------------
 
-## movement_finished
-## -----------------
-## Emitted when the pawn has finished stepping through every tile along its
-## path and is now resting on final_tile.
-## BoardManager / GameManager listen to this signal to know when it is safe
-## to evaluate the landing tile and advance the turn.
-##
-## Parameters:
-##   player_id  — the peer ID that owns this pawn (mirrors @export var below)
-##   final_tile — the board tile index (0–39) where the pawn came to rest
 signal movement_finished(player_id: int, final_tile: int)
 
 # ---------------------------------------------------------------------------
-# Exports — configured in the editor or by the spawner
+# Exports
 # ---------------------------------------------------------------------------
 
-## peer_id
-## -------
-## The ENet / WebRTC peer ID of the player who owns this pawn.
-## Set by GameManager when the pawn is instantiated so that movement_finished
-## carries the correct identity back to the turn manager.
 @export var player_id: int = 0
-
-## pawn_color
-## ----------
-## The unique color assigned to this player (distinct across all players in
-## the lobby). Applied to the pawn's StandardMaterial3D in setup().
-@export var pawn_color: Color = Color.WHITE
+@export var pawn_color: Color = Color(0.2, 0.6, 1.0)
 
 # ---------------------------------------------------------------------------
 # Node references
 # ---------------------------------------------------------------------------
 
-## anim_controller
-## ---------------
-## Provides the unified animation interface (play_walk, play_idle, etc.).
-## See AnimationController.gd for the full state contract.
-@onready var anim_controller: Node = $AnimationController
-
-## name_label
-## ----------
-## A Label3D that floats above the pawn showing the player's username.
-## Configured in setup() so it is always correct even if pawn scenes are
-## reused across sessions.
-@onready var name_label: Label3D = $NameLabel
-
-## idle_timer
-## ----------
-## A one-shot Timer (wait_time = 5.0 s, autostart = false).
-## Restarted on every player action. When it fires the pawn plays a subtle
-## idle tap-feet animation so it doesn't look frozen during long turns.
-@onready var idle_timer: Timer = $IdleTimer
+@onready var anim_controller: Node = get_node_or_null("AnimationController")
+@onready var name_label: Label3D = get_node_or_null("NameLabel")
+@onready var idle_timer: Timer = get_node_or_null("IdleTimer")
 
 # ---------------------------------------------------------------------------
 # State
 # ---------------------------------------------------------------------------
 
-## current_tile
-## ------------
-## The board tile index (0–39) where this pawn currently stands.
-## Updated after each step inside move_to_tile() and after teleport_to_jail().
 var current_tile: int = 0
-
-## is_moving
-## ---------
-## True while move_to_tile() is executing its Tween coroutine.
-## Other systems check this flag to avoid issuing a second move command while
-## the first is still in progress.
 var is_moving: bool = false
-
-# ---------------------------------------------------------------------------
-# Internal
-# ---------------------------------------------------------------------------
-
-# Reference to the active Tween so it can be killed cleanly if needed (e.g.,
-# the player is sent to jail mid-move by a Chance card).
 var _active_tween: Tween = null
+
+# 3D Roadster Car visual components
+var _car_root: Node3D = null
+var _car_body_mesh: MeshInstance3D = null
+var _wheel_nodes: Array[Node3D] = []
+var _headlights: Array[MeshInstance3D] = []
+var _taillights: Array[MeshInstance3D] = []
+var _is_idle_anim_active: bool = false
+var _idle_time: float = 0.0
 
 # ---------------------------------------------------------------------------
 # Lifecycle
 # ---------------------------------------------------------------------------
 
 func _ready() -> void:
-	# Connect the idle timer's timeout signal using a Callable (Godot 4 style).
-	idle_timer.timeout.connect(_on_idle_timer_timeout)
+	if not _car_root:
+		_build_roadster_model()
 
-	# Ensure the timer is not auto-starting in the scene; we manage it manually.
-	idle_timer.one_shot = true
+	# Hide any legacy cylinder mesh if present in scene
+	var old_cylinder := get_node_or_null("MeshInstance3D") as MeshInstance3D
+	if old_cylinder and old_cylinder != _car_body_mesh:
+		old_cylinder.visible = false
 
-	# Start the idle timer immediately so the pawn starts its idle animation
-	# if nothing happens within the first 5 seconds of the game.
-	reset_idle_timer()
+	if idle_timer:
+		if not idle_timer.timeout.is_connected(_on_idle_timer_timeout):
+			idle_timer.timeout.connect(_on_idle_timer_timeout)
+		idle_timer.one_shot = true
+		reset_idle_timer()
+
+
+func _process(delta: float) -> void:
+	# Subtle engine idle breathing when parked
+	if not is_moving and _car_root:
+		_idle_time += delta
+		var breath := sin(_idle_time * 3.5) * 0.015
+		_car_root.position.y = 0.12 + breath
+		_car_root.rotation.z = sin(_idle_time * 2.0) * 0.01
+
+
+# ---------------------------------------------------------------------------
+# 3D ROADSTER CAR PROCEDURAL MODEL
+# ---------------------------------------------------------------------------
+
+func _build_roadster_model() -> void:
+	_car_root = Node3D.new()
+	_car_root.name = "RoadsterModel"
+	_car_root.position = Vector3(0, 0.12, 0)
+	add_child(_car_root)
+
+	# --- 1. Materials ---
+	# Glossy car lacquer paint
+	var body_mat := StandardMaterial3D.new()
+	body_mat.albedo_color = pawn_color
+	body_mat.metallic = 0.55
+	body_mat.roughness = 0.22
+	body_mat.clearcoat_enabled = true
+	body_mat.clearcoat = 0.8
+
+	# Tinted glass cabin
+	var glass_mat := StandardMaterial3D.new()
+	glass_mat.albedo_color = Color(0.12, 0.15, 0.20)
+	glass_mat.metallic = 0.8
+	glass_mat.roughness = 0.12
+
+	# Chrome metal (grille, bumpers, hubcaps)
+	var chrome_mat := StandardMaterial3D.new()
+	chrome_mat.albedo_color = Color(0.92, 0.94, 0.96)
+	chrome_mat.metallic = 0.95
+	chrome_mat.roughness = 0.15
+
+	# Dark rubber tires
+	var rubber_mat := StandardMaterial3D.new()
+	rubber_mat.albedo_color = Color(0.12, 0.13, 0.14)
+	rubber_mat.roughness = 0.9
+
+	# Headlight glow
+	var light_mat := StandardMaterial3D.new()
+	light_mat.albedo_color = Color(1.0, 0.96, 0.75)
+	light_mat.emission_enabled = true
+	light_mat.emission = Color(1.0, 0.95, 0.7)
+	light_mat.emission_energy_multiplier = 2.0
+
+	# Taillight glow
+	var tail_mat := StandardMaterial3D.new()
+	tail_mat.albedo_color = Color(0.9, 0.1, 0.1)
+	tail_mat.emission_enabled = true
+	tail_mat.emission = Color(1.0, 0.1, 0.1)
+	tail_mat.emission_energy_multiplier = 2.0
+
+	# --- 2. Main Chassis Body ---
+	_car_body_mesh = MeshInstance3D.new()
+	_car_body_mesh.name = "Chassis"
+	var body_box := BoxMesh.new()
+	body_box.size = Vector3(0.42, 0.14, 0.72)
+	_car_body_mesh.mesh = body_box
+	_car_body_mesh.material_override = body_mat
+	_car_body_mesh.position = Vector3(0, 0.07, 0)
+	_car_root.add_child(_car_body_mesh)
+
+	# --- 3. Front Engine Hood (Tapered) ---
+	var hood := MeshInstance3D.new()
+	hood.name = "EngineHood"
+	var hood_box := BoxMesh.new()
+	hood_box.size = Vector3(0.38, 0.10, 0.26)
+	hood.mesh = hood_box
+	hood.material_override = body_mat
+	hood.position = Vector3(0, 0.05, 0.32)
+	_car_root.add_child(hood)
+
+	# --- 4. Cockpit / Windshield Cabin ---
+	var cabin := MeshInstance3D.new()
+	cabin.name = "Cockpit"
+	var cabin_box := BoxMesh.new()
+	cabin_box.size = Vector3(0.34, 0.13, 0.32)
+	cabin.mesh = cabin_box
+	cabin.material_override = glass_mat
+	cabin.position = Vector3(0, 0.17, -0.06)
+	_car_root.add_child(cabin)
+
+	# Roof trim
+	var roof := MeshInstance3D.new()
+	var roof_box := BoxMesh.new()
+	roof_box.size = Vector3(0.30, 0.03, 0.22)
+	roof.mesh = roof_box
+	roof.material_override = body_mat
+	roof.position = Vector3(0, 0.24, -0.08)
+	_car_root.add_child(roof)
+
+	# --- 5. Chrome Front Grille ---
+	var grille := MeshInstance3D.new()
+	grille.name = "ChromeGrille"
+	var g_box := BoxMesh.new()
+	g_box.size = Vector3(0.28, 0.08, 0.04)
+	grille.mesh = g_box
+	grille.material_override = chrome_mat
+	grille.position = Vector3(0, 0.04, 0.46)
+	_car_root.add_child(grille)
+
+	# --- 6. Headlights ---
+	for x_offset in [-0.14, 0.14]:
+		var hl := MeshInstance3D.new()
+		var hl_mesh := CylinderMesh.new()
+		hl_mesh.top_radius = 0.035
+		hl_mesh.bottom_radius = 0.035
+		hl_mesh.height = 0.04
+		hl.mesh = hl_mesh
+		hl.rotation.x = deg_to_rad(90.0)
+		hl.material_override = light_mat
+		hl.position = Vector3(x_offset, 0.06, 0.46)
+		_car_root.add_child(hl)
+		_headlights.append(hl)
+
+	# --- 7. Taillights ---
+	for x_offset in [-0.14, 0.14]:
+		var tl := MeshInstance3D.new()
+		var tl_box := BoxMesh.new()
+		tl_box.size = Vector3(0.06, 0.04, 0.03)
+		tl.mesh = tl_box
+		tl.material_override = tail_mat
+		tl.position = Vector3(x_offset, 0.08, -0.37)
+		_car_root.add_child(tl)
+		_taillights.append(tl)
+
+	# --- 8. Rotating Wheels (4x) ---
+	var wheel_offsets = [
+		Vector3(-0.23, 0.0, 0.24),   # Front Left
+		Vector3(0.23, 0.0, 0.24),    # Front Right
+		Vector3(-0.23, 0.0, -0.24),  # Rear Left
+		Vector3(0.23, 0.0, -0.24)    # Rear Right
+	]
+
+	_wheel_nodes.clear()
+	for i in range(wheel_offsets.size()):
+		var w_pivot := Node3D.new()
+		w_pivot.name = "Wheel_%d" % i
+		w_pivot.position = wheel_offsets[i]
+
+		# Tire rubber cylinder
+		var tire := MeshInstance3D.new()
+		var tire_cyl := CylinderMesh.new()
+		tire_cyl.top_radius = 0.095
+		tire_cyl.bottom_radius = 0.095
+		tire_cyl.height = 0.06
+		tire.mesh = tire_cyl
+		tire.rotation.z = deg_to_rad(90.0)
+		tire.material_override = rubber_mat
+		w_pivot.add_child(tire)
+
+		# Chrome hubcap
+		var hub := MeshInstance3D.new()
+		var hub_cyl := CylinderMesh.new()
+		hub_cyl.top_radius = 0.045
+		hub_cyl.bottom_radius = 0.045
+		hub_cyl.height = 0.065
+		hub.mesh = hub_cyl
+		hub.rotation.z = deg_to_rad(90.0)
+		hub.material_override = chrome_mat
+		w_pivot.add_child(hub)
+
+		_car_root.add_child(w_pivot)
+		_wheel_nodes.append(w_pivot)
+
+	# Position floating billboard username label above car roof
+	if name_label:
+		name_label.position = Vector3(0, 0.72, 0)
+		name_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 
 
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
-## setup
-## -----
-## Input : id       — peer ID of the owning player (stored in player_id)
-##         username — display name shown on the floating label
-##         color    — unique player color applied to the pawn mesh
-## Output: none (side-effects: configures label text, mesh material color)
-##
-## Called once by GameManager / LobbyManager after the pawn scene is spawned.
-## Separating initialisation from _ready() means the pawn can be pre-loaded
-## and configured without being added to the scene tree first.
 func setup(id: int, username: String, color: Color, initial_pos: Vector3 = Vector3.ZERO) -> void:
-	player_id  = id
+	player_id = id
 	pawn_color = color
 
 	if initial_pos != Vector3.ZERO:
 		global_position = initial_pos
 
-	# Update the floating label so other players see this pawn's owner name.
 	if name_label:
 		name_label.text = username
 
-	# Tint the pawn mesh with the player's unique color.
-	# We create a new StandardMaterial3D so that each pawn has its own material
-	# instance and changing one pawn's color never affects the others.
-	var mesh_instance := find_child("MeshInstance3D", true, false) as MeshInstance3D
-	if mesh_instance:
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = color
-		mesh_instance.material_override = mat
+	if not _car_root:
+		_build_roadster_model()
+	elif _car_body_mesh and _car_body_mesh.material_override:
+		(_car_body_mesh.material_override as StandardMaterial3D).albedo_color = color
 
 
-## move_to_tile
-## ------------
-## Input : target_tile     — destination board tile index (0–39)
-##         board_positions — Array[Vector3] of world-space tile centres,
-##                           indexed 0–39; provided by BoardManager
-##         pass_go         — whether the pawn crosses tile 0 (Go) on this move,
-##                           used for the celebrate animation when collecting \$200
-## Output: none (async — emits movement_finished when done)
-##
-## The main movement coroutine. Steps the pawn tile-by-tile along the board
-## path rather than teleporting directly to the destination. This keeps the
-## visual traversal faithful to the physical board so all players can follow
-## the movement clearly.
-##
-## We step tile-by-tile so the pawn visibly traverses the board path and every
-## player at the table (local or remote) can watch the piece move naturally.
-##
-## Board wrap-around: tile 39 → tile 0 is a valid forward step (passing Go).
-## The function computes the ordered list of tiles to visit before tweening.
 func move_to_tile(target_tile: int, board_positions: Array, pass_go: bool) -> void:
-	# Prevent overlapping move commands.
 	if is_moving:
 		push_warning("PlayerPawn: move_to_tile() called while already moving. Ignored.")
 		return
 
 	is_moving = true
-	reset_idle_timer()   # reset inactivity clock while we're clearly active
+	reset_idle_timer()
 
-	# Kill any leftover tween from a previous interrupted move.
 	if _active_tween and _active_tween.is_valid():
 		_active_tween.kill()
 
-	# -----------------------------------------------------------------
-	# Build the ordered list of intermediate tile indices to visit.
-	# -----------------------------------------------------------------
-	# We walk forward around the 40-tile board from current_tile toward
-	# target_tile, wrapping through 0 when necessary. This naturally
-	# handles the pass-Go scenario without special-casing directions.
+	# Build path sequence
 	var steps: Array[int] = []
 	var tile := current_tile
 	while tile != target_tile:
-		tile = (tile + 1) % 40   # advance one tile, wrap at 39 → 0
+		tile = (tile + 1) % 40
 		steps.append(tile)
 
-	# Safety: if current_tile == target_tile no steps are needed
-	# (e.g., rolled doubles and landed on same spot via Chance).
 	if steps.is_empty():
 		is_moving = false
 		movement_finished.emit(player_id, current_tile)
 		return
 
-	# Start the walk animation so the pawn looks like it is physically moving.
-	anim_controller.play_walk()
-
-	# -----------------------------------------------------------------
-	# Step through each tile with a Tween for smooth motion.
-	# -----------------------------------------------------------------
-	# Each step creates a fresh Tween; awaiting tween_all_completed gives us
-	# a simple sequential coroutine without a manual timer loop.
+	# Step-by-step traversal along the road path
 	for step_tile in steps:
 		var dest: Vector3 = board_positions[step_tile]
+		var start_pos := global_position
 
-		# Compute move duration proportional to distance so the speed stays
-		# consistent regardless of tile spacing variation in the board mesh.
-		var dist: float = global_position.distance_to(dest)
-		var duration: float = clampf(dist / 4.0, 0.15, 0.5)   # 4 units/sec, capped
+		# Align car rotation smoothly towards destination tile
+		var dir := (dest - start_pos)
+		dir.y = 0.0
+		if dir.length_squared() > 0.001 and _car_root:
+			var target_yaw := atan2(dir.x, dir.z)
+			var rot_tween := create_tween()
+			rot_tween.tween_property(_car_root, "rotation:y", target_yaw, 0.12).set_trans(Tween.TRANS_SINE)
+
+		var dist: float = start_pos.distance_to(dest)
+		var duration: float = clampf(dist / 4.5, 0.18, 0.45)
 
 		_active_tween = create_tween()
+		_active_tween.set_parallel(true)
 		_active_tween.set_ease(Tween.EASE_IN_OUT)
 		_active_tween.set_trans(Tween.TRANS_SINE)
-		_active_tween.tween_property(self, "global_position", dest, duration)
 
-		# Wait for this step's tween to complete before moving to the next tile.
+		# Horizontal position tween
+		_active_tween.tween_property(self, "global_position:x", dest.x, duration)
+		_active_tween.tween_property(self, "global_position:z", dest.z, duration)
+
+		# Suspension hop bounce on each tile step
+		if _car_root:
+			var hop_tween := create_tween()
+			hop_tween.tween_property(_car_root, "position:y", 0.22, duration * 0.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+			hop_tween.chain().tween_property(_car_root, "position:y", 0.12, duration * 0.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+
+		# Spin wheels forward during movement
+		for w in _wheel_nodes:
+			_active_tween.tween_property(w, "rotation:x", w.rotation.x + deg_to_rad(180.0), duration)
+
 		await _active_tween.finished
-
-		# Update our tracked position after each step so intermediate state is
-		# always accurate (useful if the pawn is interrupted mid-move).
 		current_tile = step_tile
 
-	# -----------------------------------------------------------------
-	# Movement complete — play arrival / landing animation.
-	# -----------------------------------------------------------------
 	is_moving = false
-
-	# Walk animation will be replaced by the landing animation below.
-	# (play_land_animation calls anim_controller methods which handle the
-	#  transition internally.)
-
-	# Emit the signal so GameManager can evaluate the landing tile and
-	# determine what action to take (buy, pay rent, tax, jail, etc.).
 	movement_finished.emit(player_id, current_tile)
 
 
-## play_land_animation
-## -------------------
-## Input : landing_result — Dictionary produced by BoardManager / TileManager
-##         after evaluating the tile the pawn stopped on. Expected keys:
-##             "action"  : String — one of:
-##                           "buy_available" | "pay_rent" | "pay_tax" |
-##                           "collect_go"    | "go_to_jail" | "idle" | ...
-##             (other keys such as "amount", "owner_id" are ignored here)
-## Output: none (side-effect: drives AnimationController to appropriate state)
-##
-## Maps game outcomes to emotional animations so the pawn's body language
-## immediately communicates what happened to all players watching.
 func play_land_animation(landing_result: Dictionary) -> void:
 	var action: String = landing_result.get("action", "idle")
-
-	match action:
-		"buy_available":
-			# Property is unowned and can be purchased — exciting!
-			anim_controller.play_dance()
-
-		"collect_go":
-			# Passed or landed on Go, collecting \$200 salary — celebrate!
-			anim_controller.play_dance()
-
-		"pay_rent":
-			# Must pay rent to the property owner — unhappy reaction.
-			anim_controller.play_sad()
-
-		"pay_tax":
-			# Landed on Income Tax or Luxury Tax — unhappy reaction.
-			anim_controller.play_sad()
-
-		"celebrate":
-			# Generic positive event (Free Parking, lucky Chance, etc.).
-			anim_controller.play_celebrate()
-
-		_:
-			# Community Chest, Chance (neutral), Just Visiting jail, etc.
-			anim_controller.play_idle()
-
-	# Any action counts as activity; reset idle clock so the pawn doesn't
-	# immediately start its idle tap animation right after landing.
 	reset_idle_timer()
 
+	if not _car_root:
+		return
 
-## reset_idle_timer
-## ----------------
-## Input : none
-## Output: none (side-effect: restarts IdleTimer from its configured wait_time)
-##
-## Call this whenever the player performs any visible action (move, card draw,
-## purchase, etc.) so the 5-second idle timeout is pushed back appropriately.
+	match action:
+		"buy_available", "collect_go", "celebrate":
+			# Joyful celebratory car wheelie & 360 spin!
+			var tw := create_tween()
+			tw.set_parallel(true)
+			tw.tween_property(_car_root, "rotation:x", deg_to_rad(-25.0), 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			tw.tween_property(_car_root, "position:y", 0.35, 0.25)
+			tw.chain().tween_property(_car_root, "rotation:y", _car_root.rotation.y + TAU, 0.5).set_trans(Tween.TRANS_CUBIC)
+			tw.chain().tween_property(_car_root, "rotation:x", 0.0, 0.25)
+			tw.tween_property(_car_root, "position:y", 0.12, 0.25)
+
+		"pay_rent", "pay_tax":
+			# Sad state: suspension drops low and front droops
+			var tw := create_tween()
+			tw.tween_property(_car_root, "rotation:x", deg_to_rad(15.0), 0.3).set_trans(Tween.TRANS_BOUNCE)
+			tw.tween_property(_car_root, "position:y", 0.06, 0.3)
+			tw.chain().tween_interval(0.6)
+			tw.chain().tween_property(_car_root, "rotation:x", 0.0, 0.4)
+			tw.tween_property(_car_root, "position:y", 0.12, 0.4)
+
+		_:
+			# Default settled stance
+			var tw := create_tween()
+			tw.tween_property(_car_root, "position:y", 0.12, 0.2)
+			tw.tween_property(_car_root, "rotation:x", 0.0, 0.2)
+
+
 func reset_idle_timer() -> void:
 	if idle_timer:
 		idle_timer.stop()
-		idle_timer.start()   # restarts from wait_time (set to 5.0 s in scene)
+		idle_timer.start()
 
 
-## teleport_to_jail
-## ----------------
-## Input : none (uses board_positions index 10 which is the Jail/Just Visiting tile)
-## Output: none (side-effect: instantly repositions pawn to tile 10)
-##
-## Used when the pawn is sent to jail by a card, tile, or three-doubles rule.
-## No step-by-step movement animation is played — the instant teleport signals
-## to all players that something dramatic has happened (matches physical board
-## table-talk: "Go directly to jail, do not pass Go!").
-##
-## The caller (GameManager) is responsible for:
-##   1. Updating the player's PlayerData.board_position to 10.
-##   2. Setting PlayerData.in_jail = true.
-##   3. Calling this function to move the visual pawn.
-## We intentionally keep this function free of game-logic side-effects so it
-## can also be used for scene setup / board reset without mutating game state.
 func teleport_to_jail() -> void:
-	# Stop any in-progress tween immediately to avoid fighting with the
-	# teleport position assignment.
 	if _active_tween and _active_tween.is_valid():
 		_active_tween.kill()
 	is_moving = false
-
-	# Tile 10 is always the Jail / Just Visiting corner on a standard board.
 	current_tile = 10
 
-	# The pawn's world position is set directly by the caller after this
-	# returns, OR the caller passes the board_positions array. Here we simply
-	# flag readiness; if board_positions is needed, extend the signature.
-	# For now the calling code is expected to set global_position directly:
-	#   pawn.teleport_to_jail()
-	#   pawn.global_position = board_positions[10]
-	#
-	# Play a sad animation to reinforce the punishment.
-	anim_controller.play_sad()
-
-	# Reset idle timer since the pawn just had an event.
+	# Sad state drooping
+	play_land_animation({"action": "pay_tax"})
 	reset_idle_timer()
 
 
-# ---------------------------------------------------------------------------
-# Signal handlers
-# ---------------------------------------------------------------------------
-
-## _on_idle_timer_timeout
-## ----------------------
-## Fired by IdleTimer after 5 seconds of no activity.
-## Plays the looping Idle animation (subtle breathing / tap-feet) to keep the
-## pawn looking alive while its owner is deciding what to do or waiting for
-## another player's turn to end.
 func _on_idle_timer_timeout() -> void:
-	# Only play idle if the pawn isn't currently moving — we don't want to
-	# interrupt a walk animation that is mid-step.
-	if not is_moving:
+	if not is_moving and anim_controller and anim_controller.has_method("play_idle"):
 		anim_controller.play_idle()
+
