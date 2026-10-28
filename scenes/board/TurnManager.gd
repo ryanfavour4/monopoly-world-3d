@@ -118,6 +118,20 @@ func setup_turn_order(player_ids: Array[int]) -> void:
 
 	print("[TurnManager] Turn order established: ", turn_order)
 
+	# Synchronize to all peers if multiplayer
+	if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
+		rpc_sync_turn_order.rpc(turn_order)
+
+
+@rpc("authority", "call_local", "reliable")
+func rpc_sync_turn_order(order: Array) -> void:
+	var int_order: Array[int] = []
+	for id in order:
+		int_order.append(int(id))
+	turn_order = int_order
+	_turn_order_index = 0
+	print("[TurnManager] Synced turn order from host: ", turn_order)
+
 
 func get_turn_order() -> Array[int]:
 	return turn_order
@@ -169,6 +183,47 @@ func begin_turn(player_id: int) -> void:
 	print("[TurnManager] Turn started for player: ", player_id)
 
 
+## Called by DiceRoller or active player to request a roll
+func request_roll() -> void:
+	if multiplayer.has_multiplayer_peer() and not multiplayer.is_server():
+		rpc_request_roll.rpc_id(1)
+	else:
+		_host_generate_and_broadcast_roll()
+
+
+@rpc("any_peer", "reliable")
+func rpc_request_roll() -> void:
+	if not multiplayer.is_server():
+		return
+	var sender_id: int = multiplayer.get_remote_sender_id()
+	if sender_id != current_player_id:
+		push_warning("[TurnManager] Peer %d requested roll but current player is %d" % [sender_id, current_player_id])
+		return
+	_host_generate_and_broadcast_roll()
+
+
+func _host_generate_and_broadcast_roll() -> void:
+	var d1: int = randi_range(1, 6)
+	var d2: int = randi_range(1, 6)
+	if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
+		rpc_roll_dice.rpc(d1, d2)
+	else:
+		rpc_roll_dice(d1, d2)
+
+
+@rpc("authority", "call_local", "reliable")
+func rpc_roll_dice(die1: int, die2: int) -> void:
+	var dice_node: Node = get_tree().root.find_child("DiceRoller", true, false)
+	if dice_node and dice_node.has_method("play_roll"):
+		dice_node.play_roll(die1, die2)
+
+	# The server resolves movement after dice animation settles (approx 1.2s)
+	if not multiplayer.has_multiplayer_peer() or multiplayer.is_server():
+		get_tree().create_timer(1.2).timeout.connect(func():
+			on_dice_rolled(die1, die2)
+		)
+
+
 ## Called by DiceRoller after a roll animation completes.
 ## Handles doubles logic, calculates the move total, and triggers movement.
 ##
@@ -179,8 +234,6 @@ func begin_turn(player_id: int) -> void:
 ## @param die2  Value of the second die (1–6).
 func on_dice_rolled(die1: int, die2: int) -> void:
 	# ---- Guard: must be the host's responsibility ----
-	# If running in a multiplayer context, non-host peers should never reach
-	# this function directly — they observe via RPC.
 	if multiplayer.has_multiplayer_peer() and not multiplayer.is_server():
 		push_warning("[TurnManager] on_dice_rolled called on a client — ignoring.")
 		return
@@ -206,9 +259,6 @@ func on_dice_rolled(die1: int, die2: int) -> void:
 			print("[TurnManager] Three doubles! Sending player to jail.")
 			send_to_jail(current_player_id)
 			return
-		# Otherwise the player rolls again after resolving their current move —
-		# this is handled at the end of end_turn(): we do NOT advance the turn
-		# index when doubles_count > 0.
 	else:
 		# Not doubles; reset the streak.
 		doubles_count = 0
@@ -219,46 +269,38 @@ func on_dice_rolled(die1: int, die2: int) -> void:
 
 ## Private.  Computes the new board position for the player and triggers the
 ## movement animation.  Handles GO wrap-around (40 tiles on a standard board).
-##
-## @param player_id  Peer ID of the moving player.
-## @param steps      Number of spaces to advance (sum of both dice).
 func _move_player(player_id: int, steps: int) -> void:
-	# Retrieve the player's current tile index from authoritative game state.
-	# GameState is an autoload that stores a Dictionary keyed by peer ID.
 	var current_pos: int = GameState.get_player_position(player_id)
-
-	# Standard Monopoly board has 40 tiles (indices 0–39).
 	const BOARD_SIZE: int = 40
-	# Tile 0 is GO; landing on it or passing it awards $200.
-	const GO_TILE: int    = 0
-
 	var new_pos: int = (current_pos + steps) % BOARD_SIZE
-
-	# ---- Detect GO passage ----
-	# If new_pos is less than current_pos (or the raw sum would exceed 39)
-	# the player has passed or landed on GO.
 	var passed_go: bool = (current_pos + steps) >= BOARD_SIZE
 
 	if passed_go:
 		print("[TurnManager] Player %d passed GO! Awarding $200." % player_id)
-		# Award the GO bonus through GameState so it propagates to all clients.
 		GameState.add_money(player_id, 200)
+
+	GameState.set_player_position(player_id, new_pos)
+	print("[TurnManager] Moving player %d: %d → %d" % [player_id, current_pos, new_pos])
+
+	if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
+		rpc_move_player.rpc(player_id, new_pos, passed_go)
+	else:
+		rpc_move_player(player_id, new_pos, passed_go)
+
+
+@rpc("authority", "call_local", "reliable")
+func rpc_move_player(player_id: int, target_tile: int, passed_go: bool) -> void:
+	GameState.set_player_position(player_id, target_tile)
+	if passed_go:
 		var ui: Node = get_tree().root.find_child("UIManager", true, false)
 		if ui and ui.has_method("show_passed_go_toast"):
 			ui.show_passed_go_toast(player_id)
 
-	# ---- Update authoritative position ----
-	GameState.set_player_position(player_id, new_pos)
-
-	print("[TurnManager] Moving player %d: %d → %d" % [player_id, current_pos, new_pos])
-
-	# ---- Signal the pawn / Board to animate the move ----
-	var board_node: Node = get_parent()
+	var board_node: Node = get_tree().root.find_child("Board", true, false)
 	if board_node and board_node.has_method("move_pawn"):
-		board_node.move_pawn(player_id, new_pos, passed_go)
+		board_node.move_pawn(player_id, target_tile, passed_go)
 	else:
-		# Fallback: resolve landing immediately if no pawn visual available
-		_handle_landing(player_id, new_pos)
+		_handle_landing(player_id, target_tile)
 
 
 ## Private.  Resolves the rules effect of landing on a particular tile.
@@ -287,6 +329,20 @@ func _handle_landing(player_id: int, tile_index: int) -> void:
 ## If the player rolled doubles, they get another turn (unless they were sent
 ## to jail for three consecutive doubles — handled in on_dice_rolled).
 func end_turn() -> void:
+	if multiplayer.has_multiplayer_peer() and not multiplayer.is_server():
+		rpc_request_end_turn.rpc_id(1)
+	else:
+		_execute_end_turn()
+
+
+@rpc("any_peer", "reliable")
+func rpc_request_end_turn() -> void:
+	if not multiplayer.is_server():
+		return
+	_execute_end_turn()
+
+
+func _execute_end_turn() -> void:
 	print("[TurnManager] Ending turn for player: ", current_player_id)
 	turn_ended.emit(current_player_id)
 
@@ -295,11 +351,13 @@ func end_turn() -> void:
 		print("[TurnManager] Doubles! Player %d rolls again." % current_player_id)
 		# Reset has_rolled so the dice UI re-enables.
 		has_rolled_this_turn = false
-		# begin_turn for the same player.
 		if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
-			rpc_begin_turn(current_player_id)
+			rpc_begin_turn.rpc(current_player_id)
 		else:
 			begin_turn(current_player_id)
+		return
+
+	if turn_order.is_empty():
 		return
 
 	# ---- Advance to next player ----
@@ -309,7 +367,7 @@ func end_turn() -> void:
 	# In multiplayer the host drives all turn transitions via RPC so every
 	# client processes the same turn order simultaneously.
 	if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
-		rpc_begin_turn(next_player_id)
+		rpc_begin_turn.rpc(next_player_id)
 	else:
 		# Single-player or offline mode.
 		begin_turn(next_player_id)
@@ -367,6 +425,21 @@ func send_to_jail(player_id: int) -> void:
 ## purchase_property
 ## Deducts property cost, assigns ownership, updates player inventory
 func purchase_property(player_id: int, tile_index: int) -> void:
+	if multiplayer.has_multiplayer_peer() and not multiplayer.is_server():
+		rpc_request_purchase.rpc_id(1, tile_index)
+	else:
+		_execute_purchase(player_id, tile_index)
+
+
+@rpc("any_peer", "reliable")
+func rpc_request_purchase(tile_index: int) -> void:
+	if not multiplayer.is_server():
+		return
+	var sender_id: int = multiplayer.get_remote_sender_id()
+	_execute_purchase(sender_id, tile_index)
+
+
+func _execute_purchase(player_id: int, tile_index: int) -> void:
 	var tile: BoardTileData = BoardManager.get_tile(tile_index)
 	if not tile:
 		return
@@ -384,12 +457,43 @@ func purchase_property(player_id: int, tile_index: int) -> void:
 		GameState.emit_signal("player_state_changed", player_id)
 		print("[TurnManager] Player %d purchased %s for $%d" % [player_id, tile.tile_name, tile.purchase_price])
 
+		if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
+			rpc_sync_state.rpc(GameState.players, BoardManager.get_all_owners())
+
 
 ## pay_rent
 ## Transfers rent amount from player to owner
 func pay_rent(player_id: int, owner_id: int, rent_amount: int) -> void:
+	if multiplayer.has_multiplayer_peer() and not multiplayer.is_server():
+		rpc_request_pay_rent.rpc_id(1, owner_id, rent_amount)
+	else:
+		_execute_pay_rent(player_id, owner_id, rent_amount)
+
+
+@rpc("any_peer", "reliable")
+func rpc_request_pay_rent(owner_id: int, rent_amount: int) -> void:
+	if not multiplayer.is_server():
+		return
+	var sender_id: int = multiplayer.get_remote_sender_id()
+	_execute_pay_rent(sender_id, owner_id, rent_amount)
+
+
+func _execute_pay_rent(player_id: int, owner_id: int, rent_amount: int) -> void:
 	GameState.transfer_money(player_id, owner_id, rent_amount)
 	print("[TurnManager] Player %d paid $%d rent to Player %d" % [player_id, rent_amount, owner_id])
+	if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
+		rpc_sync_state.rpc(GameState.players, BoardManager.get_all_owners())
+
+
+@rpc("authority", "call_local", "reliable")
+func rpc_sync_state(synced_players: Array, synced_owners: Dictionary) -> void:
+	GameState.set_players(synced_players)
+	BoardManager.set_all_owners(synced_owners)
+	var ui: Node = get_tree().root.find_child("UIManager", true, false)
+	if ui:
+		var inv = ui.get_node_or_null("../InventoryPanel")
+		if inv and inv.has_method("refresh_inventory"):
+			inv.refresh_inventory(multiplayer.get_unique_id())
 
 
 ## apply_money_delta
@@ -420,6 +524,20 @@ func move_player_relative(player_id: int, delta_steps: int) -> void:
 		board_node.move_pawn(player_id, new_pos, false)
 	else:
 		_handle_landing(player_id, new_pos)
+
+
+## move_to_nearest_railroad
+## Advances player to the nearest railroad space (5, 15, 25, 35)
+func move_to_nearest_railroad(player_id: int) -> void:
+	var cur_pos: int = GameState.get_player_position(player_id)
+	const RAILROADS: Array[int] = [5, 15, 25, 35]
+	var target: int = RAILROADS[0]
+	for rr in RAILROADS:
+		if rr > cur_pos:
+			target = rr
+			break
+	var pass_go: bool = target < cur_pos
+	move_player_to_tile(player_id, target, pass_go)
 
 
 ## apply_chance_card / apply_community_chest_card

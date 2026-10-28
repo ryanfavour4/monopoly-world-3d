@@ -188,9 +188,9 @@ func update_money_display(peer_id: int) -> void:
 ## Parameters:
 ##   tile_index — The tile index the player clicked on.
 func _on_card_selected(tile_index: int) -> void:
-	# UIManager is expected to be a sibling node accessible via its group or
-	# a singleton. Adjust the path if UIManager is structured differently.
-	UIManager.show_tile_detail(tile_index)
+	var ui: Node = get_tree().root.find_child("UIManager", true, false)
+	if ui and ui.has_method("show_tile_detail"):
+		ui.show_tile_detail(tile_index)
 
 
 ## _on_mortgage_requested — confirm then execute a mortgage/unmortgage action.
@@ -219,13 +219,14 @@ func _on_mortgage_requested(tile_index: int) -> void:
 		action_label = "Mortgage %s for $%d?" % [tile_data.display_name, mortgage_value]
 
 	# Ask UIManager to show a confirmation modal.
-	# The lambda captures tile_index so the callback knows which tile to act on.
-	UIManager.show_confirm_modal(
-		"Mortgage",
-		action_label,
-		func() -> void:
-			BoardManager.mortgage_property(tile_index)
-	)
+	var ui: Node = get_tree().root.find_child("UIManager", true, false)
+	if ui and ui.has_method("show_confirm_modal"):
+		ui.show_confirm_modal(
+			"Mortgage",
+			action_label,
+			func() -> void:
+				BoardManager.mortgage_property(tile_index)
+		)
 
 
 ## _on_game_state_changed — reactive refresh triggered by GameState signal.

@@ -282,6 +282,20 @@ func show_turn_notification(player_id: int, username: String = "", is_local: boo
 func handle_landing_result(player_id: int, result: Dictionary) -> void:
 	var action: String = result.get("action", "")
 	var tile: BoardTileData = result.get("tile", null)
+	var local_id: int = multiplayer.get_unique_id()
+	var is_local: bool = (player_id == local_id)
+
+	# If event happened to a remote player, only notify local player if rent was paid to them
+	if not is_local:
+		if action == "pay_rent":
+			var owner_id: int = result.get("target_id", result.get("owner_id", 0))
+			if owner_id == local_id:
+				var rent_amt: int = result.get("amount", result.get("rent_amount", 0))
+				var t_name: String = tile.tile_name if tile else "Property"
+				var p_data: Dictionary = GameState.get_player(player_id)
+				var p_name: String = p_data.get("username", "Player %d" % player_id)
+				casino_modal.show_info_modal("💸 Rent Received!", "%s landed on %s and paid you $%d rent." % [p_name, t_name, rent_amt])
+		return
 
 	match action:
 		"buy_available":
@@ -502,6 +516,26 @@ func show_confirm_modal(title: String, message: String, on_confirm: Callable) ->
 	casino_modal.pay_button.text   = "Confirm"
 	casino_modal.close_button.text = "Cancel"
 	casino_modal.show_casino_modal(title, message, on_confirm, true)
+
+
+## show_passed_go_toast
+## Notifies player that they passed GO and collected $200
+func show_passed_go_toast(player_id: int) -> void:
+	if player_id == multiplayer.get_unique_id():
+		if casino_modal and casino_modal.has_method("show_info_modal"):
+			casino_modal.show_info_modal("💰 COLLECT $200", "You passed GO and collected your $200 salary!")
+
+
+## show_landing_ui
+## Evaluates landing tile and displays appropriate interaction
+func show_landing_ui(player_id: int, tile_index: int) -> void:
+	var bm: Node = get_node_or_null("/root/BoardManager")
+	if not bm:
+		bm = get_tree().root.find_child("BoardManager", true, false)
+	if bm and bm.has_method("handle_landing"):
+		var result: Dictionary = bm.handle_landing(player_id, tile_index, 0)
+		handle_landing_result(player_id, result)
+
 
 
 # ---------------------------------------------------------------------------

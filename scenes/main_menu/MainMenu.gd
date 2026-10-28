@@ -171,8 +171,6 @@ func _on_join_button_pressed() -> void:
 # ---------------------------------------------------------------------------
 func _on_connection_succeeded() -> void:
 	_show_status("✅ Connected! Entering lobby…", Color.GREEN)
-	# Brief visual confirmation before switching scenes.
-	await get_tree().create_timer(0.5).timeout
 	get_tree().change_scene_to_file("res://scenes/lobby/Lobby.tscn")
 
 
@@ -184,7 +182,7 @@ func _on_connection_succeeded() -> void:
 # Re-enables the UI so the player can try a different IP or username.
 # ---------------------------------------------------------------------------
 func _on_connection_failed() -> void:
-	_show_status("❌ Connection failed. Check IP and try again.", Color.RED)
+	_show_status("❌ Connection failed or timed out. Check IP and port 7777.", Color.RED)
 
 	# Re-enable all interactive elements so the player can retry.
 	host_button.disabled = false

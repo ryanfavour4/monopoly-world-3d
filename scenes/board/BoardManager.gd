@@ -421,6 +421,25 @@ func get_tiles_by_owner(peer_id: int) -> Array[BoardTileData]:
 			result.append(tile)
 	return result
 
+## get_all_owners
+## Returns a dictionary mapping tile_index -> owner_id for all owned properties
+func get_all_owners() -> Dictionary:
+	var result: Dictionary = {}
+	for i in range(tiles.size()):
+		if tiles[i].owner_id > 0:
+			result[i] = tiles[i].owner_id
+	return result
+
+## set_all_owners
+## Restores ownership mapping across peers from a synchronized dictionary
+func set_all_owners(owners_dict: Dictionary) -> void:
+	for i in range(tiles.size()):
+		if owners_dict.has(i):
+			tiles[i].owner_id = int(owners_dict[i])
+		elif tiles[i].tile_type in ["property", "railroad", "utility"] and tiles[i].owner_id > 0:
+			tiles[i].owner_id = 0
+
+
 # ---------------------------------------------------------------------------
 # RENT CALCULATION
 # ---------------------------------------------------------------------------
@@ -650,3 +669,4 @@ func handle_landing(player_id: int, tile_index: int, dice_total: int = 0) -> Dic
 			result["action"] = "nothing"
 
 	return result
+

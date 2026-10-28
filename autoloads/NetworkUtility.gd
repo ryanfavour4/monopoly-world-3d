@@ -57,6 +57,7 @@ signal connection_succeeded()
 ## Stores the local player's chosen username between join_game() / host_game()
 ## and the register_player() RPC call that happens once the connection is live.
 var _local_username: String = ""
+var _connection_timer: Timer
 
 # ---------------------------------------------------------------------------
 # LIFECYCLE
@@ -69,6 +70,13 @@ func _ready() -> void:
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
+
+	_connection_timer = Timer.new()
+	_connection_timer.name = "ConnectionWatchdog"
+	_connection_timer.wait_time = 7.0
+	_connection_timer.one_shot = true
+	_connection_timer.timeout.connect(_on_connection_timeout)
+	add_child(_connection_timer)
 
 # ---------------------------------------------------------------------------
 # HOST / JOIN
@@ -123,12 +131,17 @@ func join_game(ip: String, username: String) -> bool:
 
 	multiplayer.multiplayer_peer = peer
 	print("NetworkUtility: Connecting to %s:%d …" % [target_ip, DEFAULT_PORT])
+	if _connection_timer:
+		_connection_timer.stop()
+		_connection_timer.start()
 	return true
 
 
 ## disconnect_from_game
 ## Cleanly tears down the ENet connection and removes the multiplayer peer.
 func disconnect_from_game() -> void:
+	if _connection_timer:
+		_connection_timer.stop()
 	if multiplayer.multiplayer_peer != null:
 		multiplayer.multiplayer_peer.close()
 		multiplayer.multiplayer_peer = null
@@ -269,6 +282,8 @@ func _on_peer_disconnected(peer_id: int) -> void:
 ## Now that we have a valid connection and a peer ID, we can register ourselves
 ## in the host's GameState by sending our username via RPC.
 func _on_connected_to_server() -> void:
+	if _connection_timer:
+		_connection_timer.stop()
 	print("NetworkUtility: Connected to server. Local peer ID = %d" % multiplayer.get_unique_id())
 	emit_signal("connection_succeeded")
 
@@ -277,8 +292,19 @@ func _on_connected_to_server() -> void:
 	register_player.rpc_id(1, _local_username)
 
 
+## Called when the connection watchdog expires before the handshake completes.
+func _on_connection_timeout() -> void:
+	if multiplayer.has_multiplayer_peer() and not multiplayer.is_server():
+		var status = multiplayer.multiplayer_peer.get_connection_status()
+		if status == MultiplayerPeer.CONNECTION_CONNECTING:
+			push_warning("NetworkUtility: Connection attempt timed out.")
+			_on_connection_failed()
+
+
 ## Called on the CLIENT if the ENet connection attempt times out or is refused.
 func _on_connection_failed() -> void:
+	if _connection_timer:
+		_connection_timer.stop()
 	push_warning("NetworkUtility: Connection to server failed.")
 	disconnect_from_game()
 	emit_signal("connection_failed")

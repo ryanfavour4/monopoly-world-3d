@@ -136,6 +136,10 @@ var pawns: Dictionary = {}
 #   4. Kick off the first turn.
 # ---------------------------------------------------------------------------
 func _ready() -> void:
+	# Fallback for solo/offline testing directly in the editor
+	if GameState.players.is_empty():
+		GameState.add_player(1, "Player 1")
+
 	# ── 1. Spawn pawns ────────────────────────────────────────────────────
 	_spawn_pawns()
 
@@ -152,36 +156,30 @@ func _ready() -> void:
 			dice_node.set_my_turn(is_local)
 	)
 
-	# Dice roll completed → TurnManager.on_dice_rolled
-	var dice_node = get_node_or_null("UI/DiceRoller")
-	if dice_node and dice_node.has_signal("roll_completed"):
-		dice_node.roll_completed.connect(func(d1: int, d2: int, _tot: int):
-			turn_manager.on_dice_rolled(d1, d2)
-		)
-
 	# TurnManager.idle_detected → Board: animate the idle pawn.
 	# Fired after IdleTimer expires without a dice roll from the active player.
 	turn_manager.idle_detected.connect(_on_player_idle)
-
-	# BoardManager.player_landed → Board: resolve landing consequences.
-	# Fired after a pawn finishes moving to its destination tile.
-	board_manager.player_landed.connect(_on_player_landed)
 
 	# GameState.game_over → Board: show the winner screen.
 	# Fired when a player's money drops to 0 (or another end condition).
 	GameState.game_over.connect(_on_game_over)
 
 	# ── 3. TurnManager setup ──────────────────────────────────────────────
-	var peer_ids: Array[int] = GameState.get_player_ids()
+	# In multiplayer, ONLY the Host initialises turn order and starts the first turn.
+	# Clients receive turn_order and begin_turn commands via RPC.
+	if not multiplayer.has_multiplayer_peer() or multiplayer.is_server():
+		var peer_ids: Array[int] = GameState.get_player_ids()
+		if turn_manager.get_turn_order().is_empty():
+			peer_ids.shuffle()
+			turn_manager.setup_turn_order(peer_ids)
 
-	if turn_manager.get_turn_order().is_empty():
-		peer_ids.shuffle()
-		turn_manager.setup_turn_order(peer_ids)
-
-	# ── 4. Begin the first turn ───────────────────────────────────────────
-	var first_player_id: int = turn_manager.get_current_player_id()
-	if first_player_id != 0:
-		turn_manager.begin_turn(first_player_id)
+		# ── 4. Begin the first turn ───────────────────────────────────────
+		var first_player_id: int = turn_manager.get_current_player_id()
+		if first_player_id != 0:
+			if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
+				turn_manager.rpc_begin_turn.rpc(first_player_id)
+			else:
+				turn_manager.begin_turn(first_player_id)
 
 
 # ---------------------------------------------------------------------------

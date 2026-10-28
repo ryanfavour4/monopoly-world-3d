@@ -142,6 +142,12 @@ func get_player_ids() -> Array[int]:
 	return ids
 
 
+## has_player
+## Returns true if a player with peer_id exists in the game
+func has_player(peer_id: int) -> bool:
+	return _find_player_index(peer_id) != -1
+
+
 ## get_player_position
 func get_player_position(peer_id: int) -> int:
 	var idx: int = _find_player_index(peer_id)

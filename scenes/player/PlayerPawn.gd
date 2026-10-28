@@ -66,7 +66,7 @@ signal movement_finished(player_id: int, final_tile: int)
 ## ---------------
 ## Provides the unified animation interface (play_walk, play_idle, etc.).
 ## See AnimationController.gd for the full state contract.
-@onready var anim_controller: AnimationController = $AnimationController
+@onready var anim_controller: Node = $AnimationController
 
 ## name_label
 ## ----------

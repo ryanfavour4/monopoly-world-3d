@@ -133,8 +133,41 @@ func on_roll_pressed() -> void:
 		print("[DiceRoller] Roll ignored — not this player's turn.")
 		return
 
-	print("[DiceRoller] Roll button pressed — starting animation.")
-	_animate_roll()
+	print("[DiceRoller] Roll button pressed — delegating to TurnManager.")
+	is_rolling = true
+	roll_button.disabled = true
+
+	var tm: Node = get_node_or_null("/root/TurnManager")
+	if not tm:
+		tm = get_tree().root.find_child("TurnManager", true, false)
+	if tm and tm.has_method("request_roll"):
+		tm.request_roll()
+	else:
+		_animate_roll()
+
+
+## play_roll
+## Plays the visual flicker animation using the server-determined dice values
+func play_roll(die1: int, die2: int) -> void:
+	is_rolling = true
+	if roll_button:
+		roll_button.disabled = true
+	_final_die1 = die1
+	_final_die2 = die2
+
+	const STEPS: int = 16
+	const INTERVAL: float = 0.05
+
+	var tween: Tween = create_tween()
+	for i in range(STEPS):
+		tween.tween_callback(func() -> void:
+			if die1_label:
+				die1_label.text = str(randi_range(1, 6))
+			if die2_label:
+				die2_label.text = str(randi_range(1, 6))
+		).set_delay(INTERVAL * (i + 1))
+
+	tween.tween_callback(_on_animation_finished).set_delay(INTERVAL * (STEPS + 1))
 
 # ---------------------------------------------------------------------------
 # ANIMATION
