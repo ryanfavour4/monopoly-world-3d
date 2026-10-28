@@ -1,0 +1,100 @@
+[gd_scene format=3 uid="uid://6p2u3brhlssm"]
+
+[ext_resource type="Script" uid="uid://bby5lnagc5e3d" path="res://scenes/main_menu/MainMenu.gd" id="1_isws5"]
+[ext_resource type="Theme" path="res://resources/monopoly_theme.tres" id="2_theme"]
+
+[node name="MainMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_theme")
+script = ExtResource("1_isws5")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.06, 0.08, 0.12, 1)
+
+[node name="CenterContainer" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="CenterContainer"]
+custom_minimum_size = Vector2(440, 480)
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="CenterContainer/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="CenterContainer/Panel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.5)
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 26
+text = "🎲 MONOPOLY WORLD 3D"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="CenterContainer/Panel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.8, 0.95, 1)
+theme_override_font_sizes/font_size = 13
+text = "Turn-Based Multiplayer Board Game"
+horizontal_alignment = 1
+
+[node name="HSeparator1" type="HSeparator" parent="CenterContainer/Panel/VBox"]
+layout_mode = 2
+
+[node name="UsernameLabel" type="Label" parent="CenterContainer/Panel/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Player Username:"
+
+[node name="UsernameField" type="LineEdit" parent="CenterContainer/Panel/VBox"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+placeholder_text = "Enter your display name"
+max_length = 20
+
+[node name="HostButton" type="Button" parent="CenterContainer/Panel/VBox"]
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+text = "👑 Host New Game"
+
+[node name="HSeparator2" type="HSeparator" parent="CenterContainer/Panel/VBox"]
+layout_mode = 2
+
+[node name="IPLabel" type="Label" parent="CenterContainer/Panel/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Host IP Address (for joining):"
+
+[node name="IPAddressField" type="LineEdit" parent="CenterContainer/Panel/VBox"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+text = "127.0.0.1"
+placeholder_text = "e.g. 127.0.0.1 or LAN IP"
+
+[node name="JoinButton" type="Button" parent="CenterContainer/Panel/VBox"]
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+text = "🚀 Join Existing Game"
+
+[node name="StatusLabel" type="Label" parent="CenterContainer/Panel/VBox"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+horizontal_alignment = 1
+autowrap_mode = 3

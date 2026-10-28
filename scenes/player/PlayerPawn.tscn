@@ -1,0 +1,166 @@
+[gd_scene format=3 uid="uid://c5qwx87l0vjmr"]
+
+[ext_resource type="Script" uid="uid://bgp4f6t3k5c7n" path="res://scenes/player/PlayerPawn.gd" id="1_pawn"]
+[ext_resource type="Script" uid="uid://cf4v7t5p3x7q1" path="res://scenes/player/AnimationController.gd" id="2_anim"]
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_pawn"]
+top_radius = 0.15
+bottom_radius = 0.28
+height = 0.65
+radial_segments = 16
+
+[sub_resource type="Animation" id="Animation_idle"]
+resource_name = "Idle"
+length = 2.0
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("../MeshInstance3D:position")
+tracks/0/interp = 2
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 1, 2),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [Vector3(0, 0.35, 0), Vector3(0, 0.38, 0), Vector3(0, 0.35, 0)]
+}
+
+[sub_resource type="Animation" id="Animation_walk"]
+resource_name = "Walk"
+length = 0.3
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("../MeshInstance3D:position")
+tracks/0/interp = 2
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.15, 0.3),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [Vector3(0, 0.35, 0), Vector3(0, 0.55, 0), Vector3(0, 0.35, 0)]
+}
+
+[sub_resource type="Animation" id="Animation_dance"]
+resource_name = "Dance"
+length = 1.0
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("../MeshInstance3D:position")
+tracks/0/interp = 2
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.25, 0.5, 0.75, 1),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [Vector3(0, 0.35, 0), Vector3(0, 0.65, 0), Vector3(0, 0.35, 0), Vector3(0, 0.65, 0), Vector3(0, 0.35, 0)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("../MeshInstance3D:rotation")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 0.5, 1),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [Vector3(0, 0, 0), Vector3(0, 3.14159, 0), Vector3(0, 6.28318, 0)]
+}
+
+[sub_resource type="Animation" id="Animation_sad"]
+resource_name = "Sad"
+length = 1.5
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("../MeshInstance3D:position")
+tracks/0/interp = 2
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.4, 1.5),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [Vector3(0, 0.35, 0), Vector3(0, 0.18, 0), Vector3(0, 0.35, 0)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("../MeshInstance3D:rotation")
+tracks/1/interp = 2
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 0.4, 1.5),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [Vector3(0, 0, 0), Vector3(0.35, 0, 0), Vector3(0, 0, 0)]
+}
+
+[sub_resource type="Animation" id="Animation_celebrate"]
+resource_name = "Celebrate"
+length = 1.2
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("../MeshInstance3D:position")
+tracks/0/interp = 2
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.3, 0.6, 0.9, 1.2),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [Vector3(0, 0.35, 0), Vector3(0, 0.75, 0), Vector3(0, 0.35, 0), Vector3(0, 0.75, 0), Vector3(0, 0.35, 0)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("../MeshInstance3D:rotation")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 0.6, 1.2),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [Vector3(0, 0, 0), Vector3(0, 3.14159, 0), Vector3(0, 6.28318, 0)]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_pawn"]
+_data = {
+"Celebrate": SubResource("Animation_celebrate"),
+"Dance": SubResource("Animation_dance"),
+"Idle": SubResource("Animation_idle"),
+"Sad": SubResource("Animation_sad"),
+"Walk": SubResource("Animation_walk")
+}
+
+[node name="PlayerPawn" type="CharacterBody3D"]
+script = ExtResource("1_pawn")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, 0)
+mesh = SubResource("CylinderMesh_pawn")
+
+[node name="NameLabel" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 0)
+billboard = 1
+double_sided = false
+text = "Player"
+font_size = 32
+outline_size = 6
+outline_modulate = Color(0, 0, 0, 0.85)
+
+[node name="IdleTimer" type="Timer" parent="."]
+wait_time = 5.0
+one_shot = true
+
+[node name="AnimationController" type="Node" parent="."]
+script = ExtResource("2_anim")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="AnimationController"]
+libraries = {
+"": SubResource("AnimationLibrary_pawn")
+}

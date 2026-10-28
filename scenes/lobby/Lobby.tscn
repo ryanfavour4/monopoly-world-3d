@@ -1,0 +1,95 @@
+[gd_scene format=3 uid="uid://c7mvl8hpxrw4e"]
+
+[ext_resource type="Script" uid="uid://de428e1whx6f1" path="res://scenes/lobby/Lobby.gd" id="1_lobby"]
+[ext_resource type="Theme" path="res://resources/monopoly_theme.tres" id="2_theme"]
+
+[node name="Lobby" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_theme")
+script = ExtResource("1_lobby")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.06, 0.08, 0.12, 1)
+
+[node name="CenterContainer" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="CenterContainer"]
+custom_minimum_size = Vector2(480, 520)
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="CenterContainer/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="CenterContainer/Panel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.5)
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 24
+text = "🎮 GAME LOBBY"
+horizontal_alignment = 1
+
+[node name="IPDisplayLabel" type="Label" parent="CenterContainer/Panel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.8, 0.95, 1)
+theme_override_font_sizes/font_size = 14
+text = "Your IP: 127.0.0.1"
+horizontal_alignment = 1
+
+[node name="HSeparator1" type="HSeparator" parent="CenterContainer/Panel/VBox"]
+layout_mode = 2
+
+[node name="PlayersHeader" type="Label" parent="CenterContainer/Panel/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "Connected Players:"
+
+[node name="ScrollContainer" type="ScrollContainer" parent="CenterContainer/Panel/VBox"]
+custom_minimum_size = Vector2(0, 180)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="PlayerListVBox" type="VBoxContainer" parent="CenterContainer/Panel/VBox/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 8
+
+[node name="HSeparator2" type="HSeparator" parent="CenterContainer/Panel/VBox"]
+layout_mode = 2
+
+[node name="StartButton" type="Button" parent="CenterContainer/Panel/VBox"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+text = "🚀 START GAME"
+
+[node name="LeaveButton" type="Button" parent="CenterContainer/Panel/VBox"]
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+text = "Leave to Main Menu"
+
+[node name="StatusLabel" type="Label" parent="CenterContainer/Panel/VBox"]
+custom_minimum_size = Vector2(0, 32)
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "Waiting for players..."
+horizontal_alignment = 1
+autowrap_mode = 3

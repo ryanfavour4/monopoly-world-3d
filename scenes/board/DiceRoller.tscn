@@ -1,0 +1,86 @@
+[gd_scene format=3 uid="uid://b01dce5t8xvmq"]
+
+[ext_resource type="Script" uid="uid://5s6a1l7vh248" path="res://scenes/board/DiceRoller.gd" id="1_dice"]
+[ext_resource type="Theme" path="res://resources/monopoly_theme.tres" id="2_theme"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_die"]
+bg_color = Color(0.95, 0.96, 0.98, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.8, 0.85, 0.9, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+shadow_color = Color(0, 0, 0, 0.3)
+shadow_size = 6
+shadow_offset = Vector2(0, 3)
+
+[node name="DiceRoller" type="Control" node_paths=PackedStringArray("die1_label", "die2_label", "roll_button")]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 240.0
+offset_bottom = 120.0
+theme = ExtResource("2_theme")
+script = ExtResource("1_dice")
+die1_label = NodePath("VBox/DiceHBox/Die1Panel/Die1Label")
+die2_label = NodePath("VBox/DiceHBox/Die2Panel/Die2Label")
+roll_button = NodePath("VBox/RollButton")
+
+[node name="VBox" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 10
+
+[node name="DiceHBox" type="HBoxContainer" parent="VBox"]
+layout_mode = 2
+theme_override_constants/separation = 14
+alignment = 1
+
+[node name="Die1Panel" type="Panel" parent="VBox/DiceHBox"]
+custom_minimum_size = Vector2(56, 56)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_die")
+
+[node name="Die1Label" type="Label" parent="VBox/DiceHBox/Die1Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.12, 0.15, 0.2, 1)
+theme_override_font_sizes/font_size = 30
+text = "⚀"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Die2Panel" type="Panel" parent="VBox/DiceHBox"]
+custom_minimum_size = Vector2(56, 56)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_die")
+
+[node name="Die2Label" type="Label" parent="VBox/DiceHBox/Die2Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.12, 0.15, 0.2, 1)
+theme_override_font_sizes/font_size = 30
+text = "⚀"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="RollButton" type="Button" parent="VBox"]
+custom_minimum_size = Vector2(180, 44)
+layout_mode = 2
+size_flags_horizontal = 4
+text = "🎲 ROLL DICE"

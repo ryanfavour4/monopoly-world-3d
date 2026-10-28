@@ -1,0 +1,76 @@
+[gd_scene format=3 uid="uid://b87x2q7lpvw3m"]
+
+[ext_resource type="Script" uid="uid://cslqfub33j064" path="res://scenes/ui/PropertyCard.gd" id="1_card"]
+[ext_resource type="Theme" path="res://resources/monopoly_theme.tres" id="2_theme"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card_bg"]
+content_margin_left = 10.0
+content_margin_top = 10.0
+content_margin_right = 10.0
+content_margin_bottom = 10.0
+bg_color = Color(0.1, 0.12, 0.18, 0.95)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.24, 0.3, 0.44, 0.8)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="PropertyCard" type="PanelContainer"]
+custom_minimum_size = Vector2(130, 160)
+offset_right = 130.0
+offset_bottom = 160.0
+theme = ExtResource("2_theme")
+theme_override_styles/panel = SubResource("StyleBoxFlat_card_bg")
+script = ExtResource("1_card")
+
+[node name="ColorStrip" type="ColorRect" parent="."]
+custom_minimum_size = Vector2(0, 14)
+layout_mode = 2
+size_flags_vertical = 0
+color = Color(0.2, 0.6, 1, 1)
+
+[node name="VBox" type="VBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="Spacer" type="Control" parent="VBox"]
+custom_minimum_size = Vector2(0, 12)
+layout_mode = 2
+
+[node name="NameLabel" type="Label" parent="VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "Property Name"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="PriceLabel" type="Label" parent="VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.75, 0.85, 1)
+theme_override_font_sizes/font_size = 11
+text = "Price: $100"
+horizontal_alignment = 1
+
+[node name="RentLabel" type="Label" parent="VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 0.75, 0.85, 1)
+theme_override_font_sizes/font_size = 11
+text = "Rent: $10"
+horizontal_alignment = 1
+
+[node name="HouseLabel" type="Label" parent="VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.2, 0.9, 0.5, 1)
+theme_override_font_sizes/font_size = 11
+text = "Houses: 0"
+horizontal_alignment = 1
+
+[node name="MortgageButton" type="Button" parent="VBox"]
+custom_minimum_size = Vector2(0, 28)
+layout_mode = 2
+theme_override_font_sizes/font_size = 11
+text = "Mortgage"
