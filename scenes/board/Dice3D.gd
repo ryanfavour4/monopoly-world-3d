@@ -161,7 +161,8 @@ func play_roll(die1: int, die2: int) -> void:
 
 	# Audio feedback
 	if Engine.has_singleton("AudioManager") or has_node("/root/AudioManager"):
-		AudioManager.play_dice_roll()
+		if AudioManager.has_method("play_dice_roll"):
+			AudioManager.play_dice_roll()
 
 	# Complete after both finish
 	await tween2.finished

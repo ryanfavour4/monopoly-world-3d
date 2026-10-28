@@ -71,12 +71,7 @@ max_length = 20
 [node name="HostButton" type="Button" parent="CenterContainer/Panel/VBox"]
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
-text = "👑 Host Multiplayer (Auto-Start on Join)"
-
-[node name="SoloButton" type="Button" parent="CenterContainer/Panel/VBox"]
-custom_minimum_size = Vector2(0, 44)
-layout_mode = 2
-text = "▶️ Play Solo (Offline 3D Board)"
+text = "👑 Host New Game"
 
 [node name="HSeparator2" type="HSeparator" parent="CenterContainer/Panel/VBox"]
 layout_mode = 2

@@ -97,6 +97,41 @@ func play_ding() -> void:
 			playback.push_frame(Vector2(sample, sample))  # stereo (L, R)
 
 
+## play_dice_roll
+## Plays a dice tumbling / rolling sound effect.
+## Synthesizes a rattling dice bounce sequence if no external wav file is found.
+func play_dice_roll() -> void:
+	if ResourceLoader.exists("res://audio/dice_roll.wav"):
+		play_sfx("res://audio/dice_roll.wav")
+		return
+
+	if not sfx_player:
+		return
+
+	var generator := AudioStreamGenerator.new()
+	generator.mix_rate = 44100.0
+	generator.buffer_length = 0.5
+
+	sfx_player.stream = generator
+	sfx_player.play()
+
+	var playback := sfx_player.get_stream_playback() as AudioStreamGeneratorPlayback
+	if playback:
+		var frames: int = int(generator.mix_rate * generator.buffer_length)
+		# Synthesize a sequence of wooden dice bounces / clicks
+		var click_points = [0.0, 0.08, 0.15, 0.23, 0.30, 0.36, 0.41, 0.45]
+		for i in range(frames):
+			var t: float = float(i) / generator.mix_rate
+			var sample: float = 0.0
+			for cp in click_points:
+				var dt: float = t - cp
+				if dt >= 0.0 and dt < 0.025:
+					var env: float = (1.0 - dt / 0.025)
+					sample += sin(TAU * 320.0 * dt) * env * 0.45
+			sample = clampf(sample, -1.0, 1.0)
+			playback.push_frame(Vector2(sample, sample))
+
+
 ## play_sfx
 ## Loads an audio resource by path and plays it once through sfx_player.
 ## Suitable for all short, non-looping game events (dice roll, buy property,

@@ -165,14 +165,6 @@ func register_player(username: String) -> void:
 	sync_player_roster.rpc(GameState.players)
 	print("NetworkUtility: Registered player '%s' (peer %d)" % [username, sender_id])
 
-	# Automatically trigger scene transition to 3D board for both host and clients
-	call_deferred("_auto_start_joined_game")
-
-
-func _auto_start_joined_game() -> void:
-	print("NetworkUtility: All players joined — transitioning to Board scene.")
-	start_game.rpc()
-
 
 ## start_solo_game
 ## Starts an offline single-player session directly on Board.tscn
