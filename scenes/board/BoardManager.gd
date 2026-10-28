@@ -530,6 +530,51 @@ func calculate_rent(tile_index: int, player_id: int, dice_total: int = 0) -> int
 	return 0
 
 # ---------------------------------------------------------------------------
+# MONOPOLY & HOUSE BUILDING
+# ---------------------------------------------------------------------------
+
+## Checks whether a given peer owns all properties in the specified color group
+func has_monopoly(peer_id: int, color_group: String) -> bool:
+	if color_group == "" or color_group == "none":
+		return false
+	var group_total_count: int = 0
+	var group_owned_count: int = 0
+	for t in tiles:
+		if t.color_group == color_group:
+			group_total_count += 1
+			if t.owner_id == peer_id:
+				group_owned_count += 1
+	return group_total_count > 0 and group_owned_count == group_total_count
+
+
+## Returns true if the player meets all conditions to build/upgrade a house/hotel
+func can_build_house(peer_id: int, tile_index: int) -> bool:
+	var tile: BoardTileData = get_tile(tile_index)
+	if not tile or tile.owner_id != peer_id or tile.tile_type != "property":
+		return false
+	if tile.is_mortgaged or tile.house_count >= 5:
+		return false
+	if not has_monopoly(peer_id, tile.color_group):
+		return false
+	var p_data: Dictionary = GameState.get_player(peer_id)
+	return p_data.get("money", 0) >= tile.house_cost
+
+
+## Builds or upgrades a house/hotel on the tile, deducting cost from the player
+func build_house(peer_id: int, tile_index: int) -> bool:
+	if not can_build_house(peer_id, tile_index):
+		return false
+	var tile: BoardTileData = get_tile(tile_index)
+	GameState.update_player_money(peer_id, -tile.house_cost)
+	tile.house_count += 1
+
+	var spawner = get_tree().root.find_child("BuildingSpawner", true, false)
+	if spawner and spawner.has_method("sync_buildings"):
+		spawner.sync_buildings()
+	return true
+
+
+# ---------------------------------------------------------------------------
 # MORTGAGE
 # ---------------------------------------------------------------------------
 
