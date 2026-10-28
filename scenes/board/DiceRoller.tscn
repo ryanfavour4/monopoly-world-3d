@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://b01dce5t8xvmq"]
 
-[ext_resource type="Script" path="res://scenes/board/DiceRoller.gd" id="1_dice"]
+[ext_resource type="Script" uid="uid://5s6a1l7vh248" path="res://scenes/board/DiceRoller.gd" id="1_dice"]
 [ext_resource type="Theme" path="res://resources/monopoly_theme.tres" id="2_theme"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_die"]

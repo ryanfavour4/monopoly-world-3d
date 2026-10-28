@@ -69,7 +69,9 @@ extends PanelContainer
 ## How many houses (or 🏨 for hotel) are on this property.
 ## Updated whenever the player adds/removes improvements.
 @onready var house_count_label: Label = $VBox/HouseLabel
-@onready var upgrade_button: Button = $VBox/UpgradeButton
+
+## Clicking this either mortgages (if unmortgaged) or unmortgages (if mortgaged)
+## the property. The label text is toggled by populate() accordingly.
 @onready var mortgage_button: Button = $VBox/MortgageButton
 
 
@@ -82,10 +84,9 @@ extends PanelContainer
 signal card_selected(tile_index: int)
 
 ## Emitted when the player clicks the Mortgage button.
+## InventoryPanel responds by asking the player to confirm, then calling
+## BoardManager.mortgage_property(tile_index) if confirmed.
 signal mortgage_requested(tile_index: int)
-
-## Emitted when the player clicks the Upgrade button.
-signal upgrade_requested(tile_index: int)
 
 
 # ---------------------------------------------------------------------------
@@ -93,26 +94,48 @@ signal upgrade_requested(tile_index: int)
 # ---------------------------------------------------------------------------
 
 func _ready() -> void:
-	if mortgage_button and not mortgage_button.pressed.is_connected(_on_mortgage_pressed):
-		mortgage_button.pressed.connect(_on_mortgage_pressed)
-	if upgrade_button and not upgrade_button.pressed.is_connected(_on_upgrade_pressed):
-		upgrade_button.pressed.connect(_on_upgrade_pressed)
+	# Connect the mortgage button to our handler.
+	# The card body (PanelContainer itself) detects clicks via gui_input —
+	# see _gui_input below — to avoid conflicting with the button click region.
+	mortgage_button.pressed.connect(_on_mortgage_pressed)
 
 
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
+## populate — Fill all card fields from a TileData resource.
+##
+## Why accept TileData rather than individual fields?
+##   TileData is the single source of truth for everything about a tile.
+##   Accepting the full object means populate() stays stable even if we add
+##   more fields to TileData later — we only update this function, not every
+##   call site.
+##
+## Parameters:
+##   tile_data — A TileData resource (autoloaded from BoardManager or passed
+##               directly). Must not be null; caller should guard against that.
+##
+## Called by: InventoryPanel.refresh_inventory()
 func populate(tile_data: BoardTileData) -> void:
+	# Guard: if tile_data is null (e.g. invalid index), show placeholder values
 	if tile_data == null:
 		push_error("PropertyCard.populate() received null TileData for tile_index=%d" % tile_index)
 		property_name_label.text = "ERROR"
 		return
 
+	# --- Text fields ---
 	property_name_label.text = tile_data.tile_name
+
+	# Monopoly uses whole-dollar amounts; format with $ prefix.
 	price_label.text = "Price: $%d" % tile_data.purchase_price
+
+	# Base rent (no houses). Railroads and utilities are handled inside TileData
+	# already — they expose a rent property that accounts for their special rules.
 	rent_label.text = "Rent: $%d" % tile_data.base_rent
 
+	# Display house count; if 5 houses are represented as a hotel, show that.
+	# TileData.house_count should be 0-5 where 5 = hotel.
 	if tile_data.house_count == 5:
 		house_count_label.text = "🏨 Hotel"
 	elif tile_data.house_count > 0:
@@ -120,38 +143,21 @@ func populate(tile_data: BoardTileData) -> void:
 	else:
 		house_count_label.text = "Houses: none"
 
-	# Mortgage button
+	# --- Mortgage button label ---
+	# Toggle label based on current mortgage state. The actual action is
+	# handled by InventoryPanel after confirmation.
 	if tile_data.is_mortgaged:
 		mortgage_button.text = "Unmortgage"
+		# Tint the card to indicate it is mortgaged (greyed out).
 		modulate = Color(0.7, 0.7, 0.7, 1.0)
 	else:
 		mortgage_button.text = "Mortgage"
 		modulate = Color.WHITE
 
-	# Upgrade button logic
-	if tile_data.tile_type == "property":
-		upgrade_button.show()
-		var local_id: int = multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
-		if tile_data.house_count >= 5:
-			upgrade_button.text = "Max Level"
-			upgrade_button.disabled = true
-		elif BoardManager.can_build_house(local_id, tile_index):
-			if tile_data.house_count == 4:
-				upgrade_button.text = "+ Hotel ($%d)" % tile_data.house_cost
-			else:
-				upgrade_button.text = "+ House ($%d)" % tile_data.house_cost
-			upgrade_button.disabled = false
-		else:
-			upgrade_button.text = "+ House ($%d)" % tile_data.house_cost
-			upgrade_button.disabled = true
-	else:
-		upgrade_button.hide()
-
+	# --- Colour strip ---
+	# The top stripe gives an instant visual cue about which group (monopoly
+	# set) the property belongs to, matching physical board card colours.
 	color_strip.color = get_group_color(tile_data.color_group)
-
-
-func _on_upgrade_pressed() -> void:
-	emit_signal("upgrade_requested", tile_index)
 
 
 # ---------------------------------------------------------------------------

@@ -9,7 +9,6 @@ func _ready() -> void:
 	test_board_manager()
 	test_board_and_pawns()
 	test_turn_and_gameplay_flow()
-	test_inventory_and_upgrades()
 
 	print("========================================")
 	print("   ALL TESTS PASSED SUCCESSFULLY! (0)   ")
@@ -66,18 +65,12 @@ func test_board_manager() -> void:
 
 
 func test_board_and_pawns() -> void:
-	print("[TEST] 3. Board, Camera, World & Roadster Pawns verification...")
+	print("[TEST] 3. Board & Player Pawn spawning verification...")
 	var board_scene: PackedScene = load("res://scenes/board/Board.tscn")
 	assert(board_scene != null, "Board.tscn must be loadable")
 
 	var board_instance = board_scene.instantiate()
 	add_child(board_instance)
-
-	# Verify 3D systems
-	assert(board_instance.find_child("CameraRig", true, false) != null, "CameraRig must exist")
-	assert(board_instance.find_child("BoardWorld", true, false) != null, "BoardWorld must exist")
-	assert(board_instance.find_child("BuildingSpawner", true, false) != null, "BuildingSpawner must exist")
-	assert(board_instance.find_child("Dice3D", true, false) != null, "Dice3D must exist")
 
 	var pawns_container = board_instance.get_node("Pawns")
 	assert(pawns_container != null, "Pawns container must exist")
@@ -89,10 +82,6 @@ func test_board_and_pawns() -> void:
 	assert(p2_pawn != null, "Pawn for peer 2 must exist")
 	assert(p1_pawn.name_label.text == "Alice (Host)", "Pawn 1 label check")
 	assert(p2_pawn.name_label.text == "Bob (Client)", "Pawn 2 label check")
-
-	# Verify 3D Roadster Car components
-	assert(p1_pawn._car_root != null, "Pawn 1 should have 3D car root")
-	assert(p1_pawn._wheel_nodes.size() == 4, "Pawn 1 must have 4 wheels")
 	print("  -> Board and pawns passed.")
 
 
@@ -116,7 +105,6 @@ func test_turn_and_gameplay_flow() -> void:
 	var p1_post_cash = GameState.get_player(1)["money"]
 	assert(p1_post_cash == p1_pre_cash - 400, "Player 1 money deducted by 400")
 	assert(BoardManager.get_tile_owner(39) == 1, "Boardwalk owned by player 1")
-	assert(GameState.get_player_properties(1).has(39), "Tile 39 in player 1 owned properties")
 
 	# Simulate player 2 landing on Boardwalk and paying rent ($50)
 	var p2_pre_cash = GameState.get_player(2)["money"]
@@ -135,25 +123,3 @@ func test_turn_and_gameplay_flow() -> void:
 	# End turn
 	TurnManager.end_turn()
 	print("  -> Gameplay flow passed.")
-
-
-func test_inventory_and_upgrades() -> void:
-	print("[TEST] 5. Inventory & Building Upgrades verification...")
-	# Player 1 buys Park Place (tile 37) to complete dark blue monopoly with Boardwalk (39)
-	TurnManager.purchase_property(1, 37)
-	assert(GameState.get_player_properties(1).has(37), "Player 1 has tile 37")
-	assert(BoardManager.has_monopoly(1, "dark_blue"), "Player 1 has dark_blue monopoly")
-
-	# Player 1 net worth should be cash + value of both properties ($350 + $400 = $750)
-	var p1_cash = GameState.get_player(1)["money"]
-	var p1_net = GameState.get_player_net_worth(1)
-	assert(p1_net == p1_cash + 750, "Net worth matches cash + property value")
-
-	# Upgrade building on Boardwalk
-	assert(BoardManager.can_build_house(1, 39), "Can build house on Boardwalk")
-	var initial_cash = GameState.get_player(1)["money"]
-	TurnManager.upgrade_property(1, 39)
-	assert(BoardManager.get_tile(39).house_count == 1, "Boardwalk now has 1 house")
-	assert(GameState.get_player(1)["money"] == initial_cash - 200, "House cost $200 deducted")
-
-	print("  -> Inventory & upgrades passed.")

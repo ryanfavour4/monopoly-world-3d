@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://dm0k1a5l7vm3x"]
 
-[ext_resource type="Script" path="res://scenes/ui/CasinoModal.gd" id="1_modal"]
+[ext_resource type="Script" uid="uid://d7s4vwl6p3w2" path="res://scenes/ui/CasinoModal.gd" id="1_modal"]
 [ext_resource type="Theme" path="res://resources/monopoly_theme.tres" id="2_theme"]
 
 [node name="CasinoModal" type="Control"]

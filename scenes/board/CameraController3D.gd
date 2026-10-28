@@ -197,10 +197,6 @@ func focus_active_pawn() -> void:
 			_target_pan = pawn_node.global_position
 
 
-func focus_on_active_pawn() -> void:
-	focus_active_pawn()
-
-
 ## toggle_top_down
 ## Toggles between straight top-down (85°) and angled view (55°)
 func toggle_top_down() -> void:

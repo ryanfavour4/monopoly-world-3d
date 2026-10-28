@@ -39,21 +39,11 @@ extends Node
 # Node references
 # ---------------------------------------------------------------------------
 
-@onready var casino_modal: Control = _resolve_node("CasinoModal") as Control
-@onready var inventory_panel: Control = _resolve_node("InventoryPanel") as Control
-@onready var turn_banner: Label = _resolve_node("TurnBanner") as Label
-@onready var dice_roller: Node = _resolve_node("DiceRoller")
-@onready var end_turn_button: Button = _resolve_node("EndTurnButton") as Button
-
-func _resolve_node(node_name: String) -> Node:
-	var n = get_node_or_null("../" + node_name)
-	if n:
-		return n
-	if get_parent():
-		n = get_parent().find_child(node_name, true, false)
-		if n:
-			return n
-	return get_tree().root.find_child(node_name, true, false)
+@onready var casino_modal: Control = get_node_or_null("../CasinoModal")
+@onready var inventory_panel: Control = get_node_or_null("../InventoryPanel")
+@onready var turn_banner: Label = get_node_or_null("../TurnBanner")
+@onready var dice_roller: Node = get_node_or_null("../DiceRoller")
+@onready var end_turn_button: Button = get_node_or_null("../EndTurnButton")
 
 
 # ---------------------------------------------------------------------------
@@ -212,122 +202,59 @@ func _ready() -> void:
 	if turn_banner:
 		turn_banner.modulate.a = 0.0
 
-	# Wire Camera utility buttons if present in HUD
-	var reset_cam_btn: Button = _resolve_node("ResetCamButton") as Button
-	if reset_cam_btn and not reset_cam_btn.pressed.is_connected(_on_reset_cam_pressed):
-		reset_cam_btn.pressed.connect(_on_reset_cam_pressed)
-
-	var focus_pawn_btn: Button = _resolve_node("FocusPawnButton") as Button
-	if focus_pawn_btn and not focus_pawn_btn.pressed.is_connected(_on_focus_pawn_pressed):
-		focus_pawn_btn.pressed.connect(_on_focus_pawn_pressed)
-
-	# Auto-refresh HUD stats when state changes
-	if GameState.has_signal("player_state_changed"):
-		GameState.player_state_changed.connect(func(pid: int):
-			var local_id: int = multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
-			update_top_stats(local_id)
-		)
-
-
-func _on_reset_cam_pressed() -> void:
-	var cam_rig = get_tree().root.find_child("CameraRig", true, false)
-	if cam_rig and cam_rig.has_method("reset_view"):
-		cam_rig.reset_view()
-
-
-func _on_focus_pawn_pressed() -> void:
-	var cam_rig = get_tree().root.find_child("CameraRig", true, false)
-	if cam_rig and cam_rig.has_method("focus_on_active_pawn"):
-		cam_rig.focus_on_active_pawn()
-
-
-## update_top_stats — Updates modern tycoon HUD pills (Turn, Cash, Net Worth, Position)
-func update_top_stats(player_id: int) -> void:
-	if not GameState.has_player(player_id):
-		return
-
-	var p_data: Dictionary = GameState.get_player(player_id)
-	var cash: int = p_data.get("money", 0)
-	var net_worth: int = GameState.get_player_net_worth(player_id)
-	var current_tile: int = p_data.get("position", 0)
-	var tile_data = BoardManager.get_tile(current_tile)
-	var tile_name: String = tile_data.tile_name if tile_data else "Tile %d" % current_tile
-
-	var cash_label: Label = _resolve_node("CashPillLabel") as Label
-	if cash_label:
-		cash_label.text = "💵 Cash: $%s" % _format_num(cash)
-
-	var net_worth_label: Label = _resolve_node("NetWorthPillLabel") as Label
-	if net_worth_label:
-		net_worth_label.text = "💎 Net Worth: $%s" % _format_num(net_worth)
-
-	var pos_label: Label = _resolve_node("PositionPillLabel") as Label
-	if pos_label:
-		pos_label.text = "📍 %s (#%d)" % [tile_name, current_tile]
-
-
-func _format_num(amount: int) -> String:
-	var s := str(abs(amount))
-	var result := ""
-	var count  := 0
-	for i in range(s.length() - 1, -1, -1):
-		if count > 0 and count % 3 == 0:
-			result = "," + result
-		result = s[i] + result
-		count += 1
-	if amount < 0:
-		result = "-" + result
-	return result
-
 
 # ---------------------------------------------------------------------------
 # Turn-transition HUD
 # ---------------------------------------------------------------------------
 
 ## show_turn_notification — Update the HUD banner and end-turn button visibility.
+##
+## Called by TurnManager at the START of each player's turn, on ALL clients.
+##
+## Design intent:
+##   - Green banner + End Turn button = "it's me, I need to act."
+##   - Grey banner, no button         = "watching someone else play."
+##
+## Parameters:
+##   player_id — Peer ID of the player whose turn it now is.
+##   username  — Display name for that player (from GameState).
+##   is_local  — True if player_id == multiplayer.get_unique_id().
 func show_turn_notification(player_id: int, username: String = "", is_local: bool = false) -> void:
 	if username.is_empty():
 		var p_data: Dictionary = GameState.get_player(player_id)
 		username = p_data.get("username", "Player %d" % player_id)
 		is_local = (player_id == multiplayer.get_unique_id())
 
-	# Update Top HUD Turn pill badge
-	var turn_pill_label: Label = _resolve_node("TurnPillLabel") as Label
-	if turn_pill_label:
-		if is_local:
-			turn_pill_label.text = "🎲 YOUR TURN (%s)" % username.to_upper()
-			turn_pill_label.add_theme_color_override("font_color", Color(0.2, 0.95, 0.4))
-		else:
-			turn_pill_label.text = "⏳ WAITING (%s)" % username
-			turn_pill_label.add_theme_color_override("font_color", Color(0.75, 0.82, 0.9))
-
-	var local_id: int = multiplayer.get_unique_id() if multiplayer.has_multiplayer_peer() else 1
-	update_top_stats(local_id)
-
 	# Compose banner text. Using ALL-CAPS when local creates a sense of urgency.
 	if is_local:
-		if turn_banner:
-			turn_banner.text = "🎲 YOUR TURN, %s!" % username.to_upper()
-			turn_banner.add_theme_color_override("font_color", Color(0.2, 0.9, 0.3))
-		if end_turn_button:
-			end_turn_button.show()
+		turn_banner.text = "🎲 YOUR TURN, %s!" % username.to_upper()
+		turn_banner.add_theme_color_override("font_color", Color(0.2, 0.9, 0.3))  # Green
+		end_turn_button.show()
 	else:
-		if turn_banner:
-			turn_banner.text = "%s's Turn..." % username
-			turn_banner.add_theme_color_override("font_color", Color(0.75, 0.75, 0.75))
-		if end_turn_button:
-			end_turn_button.hide()
+		turn_banner.text = "%s's Turn..." % username
+		turn_banner.add_theme_color_override("font_color", Color(0.75, 0.75, 0.75))  # Grey
+		end_turn_button.hide()
 
-	if turn_banner:
-		var tween: Tween = create_tween()
-		tween.set_ease(Tween.EASE_IN_OUT)
-		tween.set_trans(Tween.TRANS_SINE)
-		tween.tween_property(turn_banner, "modulate:a", 1.0, 0.3)
-		tween.tween_interval(2.0)
-		tween.tween_property(turn_banner, "modulate:a", 0.0, 0.5)
+	# Animate: fade in → hold → fade out.
+	# The tween is non-blocking; the rest of the turn setup continues while it plays.
+	var tween: Tween = create_tween()
+	tween.set_ease(Tween.EASE_IN_OUT)
+	tween.set_trans(Tween.TRANS_SINE)
 
-	if inventory_panel and inventory_panel.has_method("refresh_inventory"):
-		inventory_panel.refresh_inventory(local_id)
+	# 1. Fade in over 0.3 s.
+	tween.tween_property(turn_banner, "modulate:a", 1.0, 0.3)
+
+	# 2. Hold visible for 2 s.
+	tween.tween_interval(2.0)
+
+	# 3. Fade out over 0.5 s.
+	tween.tween_property(turn_banner, "modulate:a", 0.0, 0.5)
+
+	# Also refresh the inventory panel so it shows the local player's properties.
+	# If it's a remote player's turn, we still show the local player's inventory
+	# (they might want to plan mortgages etc. while waiting).
+	var local_id: int = multiplayer.get_unique_id()
+	inventory_panel.refresh_inventory(local_id)
 
 
 # ---------------------------------------------------------------------------

@@ -1,17 +1,13 @@
-[gd_scene format=3 uid="uid://b237r8p1w4kml"]
+﻿[gd_scene format=3 uid="uid://b237r8p1w4kml"]
 
-[ext_resource type="Script" path="res://scenes/board/Board.gd" id="1_board"]
-[ext_resource type="PackedScene" path="res://scenes/player/PlayerPawn.tscn" id="2_pawn_scene"]
-[ext_resource type="PackedScene" path="res://scenes/board/BoardTile.tscn" id="3_tile_scene"]
-[ext_resource type="PackedScene" path="res://scenes/board/DiceRoller.tscn" id="4_dice_scene"]
-[ext_resource type="PackedScene" path="res://scenes/ui/InventoryPanel.tscn" id="5_inv_scene"]
-[ext_resource type="PackedScene" path="res://scenes/ui/CasinoModal.tscn" id="6_modal_scene"]
-[ext_resource type="Script" path="res://scenes/ui/UIManager.gd" id="7_uimanager"]
+[ext_resource type="Script" uid="uid://chv6plf3e46c7" path="res://scenes/board/Board.gd" id="1_board"]
+[ext_resource type="PackedScene" uid="uid://c5qwx87l0vjmr" path="res://scenes/player/PlayerPawn.tscn" id="2_pawn_scene"]
+[ext_resource type="PackedScene" uid="uid://cx82m5k8xvy5p" path="res://scenes/board/BoardTile.tscn" id="3_tile_scene"]
+[ext_resource type="PackedScene" uid="uid://b01dce5t8xvmq" path="res://scenes/board/DiceRoller.tscn" id="4_dice_scene"]
+[ext_resource type="PackedScene" uid="uid://ci7q43m42x78k" path="res://scenes/ui/InventoryPanel.tscn" id="5_inv_scene"]
+[ext_resource type="PackedScene" uid="uid://dm0k1a5l7vm3x" path="res://scenes/ui/CasinoModal.tscn" id="6_modal_scene"]
+[ext_resource type="Script" uid="uid://drj4qg86k04a4" path="res://scenes/ui/UIManager.gd" id="7_uimanager"]
 [ext_resource type="Theme" path="res://resources/monopoly_theme.tres" id="8_theme"]
-[ext_resource type="Script" path="res://scenes/board/CameraController3D.gd" id="9_camera"]
-[ext_resource type="Script" path="res://scenes/board/BoardWorld.gd" id="10_world"]
-[ext_resource type="Script" path="res://scenes/board/BuildingSpawner.gd" id="11_spawner"]
-[ext_resource type="Script" path="res://scenes/board/Dice3D.gd" id="12_dice3d"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sky"]
 sky_top_color = Color(0.12, 0.16, 0.24, 1)
@@ -46,38 +42,6 @@ size = Vector3(8.0, 0.05, 8.0)
 albedo_color = Color(0.06, 0.24, 0.14, 1)
 roughness = 0.85
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_pill"]
-content_margin_left = 12.0
-content_margin_top = 6.0
-content_margin_right = 12.0
-content_margin_bottom = 6.0
-bg_color = Color(0.08, 0.11, 0.18, 0.92)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.24, 0.36, 0.55, 0.7)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_pill"]
-content_margin_left = 12.0
-content_margin_top = 6.0
-content_margin_right = 12.0
-content_margin_bottom = 6.0
-bg_color = Color(0.12, 0.16, 0.25, 0.92)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.35, 0.5, 0.75, 0.8)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
-
 [node name="Board" type="Node3D"]
 script = ExtResource("1_board")
 player_pawn_scene = ExtResource("2_pawn_scene")
@@ -91,21 +55,9 @@ light_color = Color(1, 0.98, 0.92, 1)
 light_energy = 1.3
 shadow_enabled = true
 
-[node name="CameraRig" type="Node3D" parent="."]
-script = ExtResource("9_camera")
-
-[node name="Camera3D" type="Camera3D" parent="CameraRig"]
-transform = Transform3D(1, 0, 0, 0, 0.573576, 0.819152, 0, -0.819152, 0.573576, 0, 14, 9)
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.529919, 0.848048, 0, -0.848048, 0.529919, 0, 13.5, 8.2)
 fov = 48.0
-
-[node name="BoardWorld" type="Node3D" parent="."]
-script = ExtResource("10_world")
-
-[node name="BuildingSpawner" type="Node3D" parent="."]
-script = ExtResource("11_spawner")
-
-[node name="Dice3D" type="Node3D" parent="."]
-script = ExtResource("12_dice3d")
 
 [node name="BoardBase" type="MeshInstance3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.15, 0)
@@ -278,6 +230,7 @@ tile_index = 38
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.5, 0.05, 5.5)
 tile_index = 39
 
+
 [node name="Pawns" type="Node3D" parent="."]
 
 [node name="UI" type="CanvasLayer" parent="."]
@@ -285,142 +238,62 @@ tile_index = 39
 [node name="UIManager" type="Node" parent="UI"]
 script = ExtResource("7_uimanager")
 
-[node name="TopHUD" type="MarginContainer" parent="UI"]
-anchors_preset = 10
-anchor_right = 1.0
-offset_bottom = 56.0
-grow_horizontal = 2
-theme = ExtResource("8_theme")
-theme_override_constants/margin_left = 18
-theme_override_constants/margin_top = 12
-theme_override_constants/margin_right = 18
-
-[node name="HBox" type="HBoxContainer" parent="UI/TopHUD"]
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name="TurnPill" type="PanelContainer" parent="UI/TopHUD/HBox"]
-layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_pill")
-
-[node name="TurnPillLabel" type="Label" parent="UI/TopHUD/HBox/TurnPill"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.2, 0.95, 0.45, 1)
-theme_override_font_sizes/font_size = 13
-text = "🎲 TURN: Player 1"
-
-[node name="CashPill" type="PanelContainer" parent="UI/TopHUD/HBox"]
-layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_pill")
-
-[node name="CashPillLabel" type="Label" parent="UI/TopHUD/HBox/CashPill"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.2, 0.92, 0.4, 1)
-theme_override_font_sizes/font_size = 13
-text = "💵 Cash: $1,500"
-
-[node name="NetWorthPill" type="PanelContainer" parent="UI/TopHUD/HBox"]
-layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_pill")
-
-[node name="NetWorthPillLabel" type="Label" parent="UI/TopHUD/HBox/NetWorthPill"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.98, 0.78, 0.2, 1)
-theme_override_font_sizes/font_size = 13
-text = "💎 Net Worth: $1,500"
-
-[node name="PositionPill" type="PanelContainer" parent="UI/TopHUD/HBox"]
-layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_pill")
-
-[node name="PositionPillLabel" type="Label" parent="UI/TopHUD/HBox/PositionPill"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.4, 0.8, 1, 1)
-theme_override_font_sizes/font_size = 13
-text = "📍 GO (#0)"
-
-[node name="Spacer" type="Control" parent="UI/TopHUD/HBox"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="ResetCamButton" type="Button" parent="UI/TopHUD/HBox"]
-layout_mode = 2
-theme_override_styles/normal = SubResource("StyleBoxFlat_btn_pill")
-theme_override_font_sizes/font_size = 12
-text = "🎥 Reset (R)"
-
-[node name="FocusPawnButton" type="Button" parent="UI/TopHUD/HBox"]
-layout_mode = 2
-theme_override_styles/normal = SubResource("StyleBoxFlat_btn_pill")
-theme_override_font_sizes/font_size = 12
-text = "🎯 Focus (F)"
-
-[node name="NotificationHUD" type="Control" parent="UI"]
-layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-
-[node name="TurnBanner" type="Label" parent="UI/NotificationHUD"]
-layout_mode = 1
+[node name="TurnBanner" type="Label" parent="UI"]
 anchors_preset = 5
 anchor_left = 0.5
 anchor_right = 0.5
-offset_left = -280.0
-offset_top = 76.0
-offset_right = 280.0
-offset_bottom = 124.0
+offset_left = -250.0
+offset_top = 20.0
+offset_right = 250.0
+offset_bottom = 68.0
 grow_horizontal = 2
 theme = ExtResource("8_theme")
 theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.85)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.7)
 theme_override_constants/shadow_offset_y = 2
 theme_override_font_sizes/font_size = 24
 text = "🎲 WELCOME TO MONOPOLY"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="BottomHUD" type="MarginContainer" parent="UI"]
-anchors_preset = 12
+[node name="EndTurnButton" type="Button" parent="UI"]
+anchors_preset = 7
+anchor_left = 0.5
 anchor_top = 1.0
-anchor_right = 1.0
+anchor_right = 0.5
 anchor_bottom = 1.0
-offset_top = -180.0
+offset_left = -90.0
+offset_top = -68.0
+offset_right = 90.0
+offset_bottom = -20.0
 grow_horizontal = 2
 grow_vertical = 0
 theme = ExtResource("8_theme")
-theme_override_constants/margin_left = 18
-theme_override_constants/margin_right = 18
-theme_override_constants/margin_bottom = 14
-
-[node name="VBox" type="VBoxContainer" parent="UI/BottomHUD"]
-layout_mode = 2
-theme_override_constants/separation = 10
-
-[node name="InventoryPanel" parent="UI/BottomHUD/VBox" instance=ExtResource("5_inv_scene")]
-layout_mode = 2
-
-[node name="ActionBar" type="HBoxContainer" parent="UI/BottomHUD/VBox"]
-layout_mode = 2
-theme_override_constants/separation = 16
-
-[node name="DiceRoller" parent="UI/BottomHUD/VBox/ActionBar" instance=ExtResource("4_dice_scene")]
-layout_mode = 2
-
-[node name="Spacer" type="Control" parent="UI/BottomHUD/VBox/ActionBar"]
-layout_mode = 2
-size_flags_horizontal = 3
-
-[node name="EndTurnButton" type="Button" parent="UI/BottomHUD/VBox/ActionBar"]
-custom_minimum_size = Vector2(180, 48)
-layout_mode = 2
-size_flags_vertical = 8
-theme = ExtResource("8_theme")
-theme_override_font_sizes/font_size = 14
 text = "⏭️ END TURN"
+
+[node name="DiceRoller" parent="UI" instance=ExtResource("4_dice_scene")]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = -140.0
+offset_right = 264.0
+offset_bottom = -20.0
+grow_vertical = 0
+
+[node name="InventoryPanel" parent="UI" instance=ExtResource("5_inv_scene")]
+layout_mode = 3
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -360.0
+offset_top = -260.0
+offset_right = -20.0
+offset_bottom = -20.0
+grow_horizontal = 0
+grow_vertical = 0
 
 [node name="CasinoModal" parent="UI" instance=ExtResource("6_modal_scene")]
 layout_mode = 3
